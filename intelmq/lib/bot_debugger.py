@@ -12,19 +12,20 @@ Depending on the subcommand received, the class either
  * processes single message, either injected or from default pipeline (process subcommand)
  * reads the message from input pipeline or send a message to output pipeline (message subcommand)
 """
-import time
 import json
-from os.path import exists
+import sys
 from importlib import import_module
+from os.path import exists
+
+import time
 
 from intelmq.lib import utils
 from intelmq.lib.message import MessageFactory
-from intelmq.lib.utils import StreamHandler
-from intelmq.lib.utils import error_message_from_exc
+from intelmq.lib.pipeline import Pipeline
+from intelmq.lib.utils import StreamHandler, error_message_from_exc
 
 
 class BotDebugger:
-
     EXAMPLE = """\nThe message may look like:
     '{"source.network": "178.72.192.0/18", "time.observation": "2017-05-12T05:23:06+00:00"}' """
 
@@ -32,7 +33,7 @@ class BotDebugger:
     logging_level = None
 
     def __init__(self, runtime_configuration, bot_id, run_subcommand=None, console_type=None,
-                 dryrun=None, message_kind=None, msg=None, loglevel=None):
+                 message_kind=None, dryrun=None, msg=None, show=None, loglevel=None):
         self.runtime_configuration = runtime_configuration
         module = import_module(self.runtime_configuration['module'])
 
@@ -43,8 +44,8 @@ class BotDebugger:
 
         bot = getattr(module, 'BOT')
         if run_subcommand == "message":
-            bot.init = lambda *args: None
-        self.instance = bot(bot_id)
+            bot.init = lambda *args, **kwargs: None
+        self.instance = bot(bot_id, disable_multithreading=True)
 
         if not run_subcommand:
             self.instance.start()
@@ -56,7 +57,7 @@ class BotDebugger:
                 self._message(message_kind, msg)
                 return
             elif run_subcommand == "process":
-                self._process(dryrun, msg)
+                self._process(dryrun, msg, show)
             else:
                 print("Subcommand {} not known.".format(run_subcommand))
 
@@ -82,7 +83,23 @@ class BotDebugger:
         module.set_trace()
 
     def _message(self, message_action_kind, msg):
-        if message_action_kind == "get":
+        if message_action_kind == "send":
+            if self.instance.group == "Output":
+                self.instance.logger.warning("Output bots can't send messages.")
+                return
+
+            if not bool(self.instance._Bot__destination_queues):
+                self.instance.logger.warning("Bot has no destination queues.")
+                return
+            if msg:
+                msg = self.arg2msg(msg)
+                self.instance.send_message(msg)
+                self.instance.logger.info("Message sent to output pipelines.")
+            else:
+                self.messageWizzard("Message missing!")
+        elif self.instance.group == "Collector":
+            self.instance.logger.warning("Collector bots have no input queue.")
+        elif message_action_kind == "get":
             self.instance.logger.info("Waiting for a message to get...")
             if not bool(self.instance._Bot__source_queues):
                 self.instance.logger.warning("Bot has no source queue.")
@@ -99,41 +116,43 @@ class BotDebugger:
             self.instance.logger.info("Waiting for a message to pop...")
             self.pprint(self.instance.receive_message())
             self.instance.acknowledge_message()
-        elif message_action_kind == "send":
-            if not bool(self.instance._Bot__destination_queues):
-                self.instance.logger.warning("Bot has no destination queues.")
-                return
-            if msg:
-                msg = self.arg2msg(msg)
-                self.instance.send_message(msg, auto_add=False)
-                self.instance.logger.info("Message sent to output pipelines.")
-            else:
-                self.messageWizzard("Message missing!")
 
-    def _process(self, dryrun, msg):
+    def _process(self, dryrun, msg, show):
         if msg:
             msg = MessageFactory.serialize(self.arg2msg(msg))
-            self.instance._Bot__source_pipeline.receive = lambda: msg
+            if not self.instance._Bot__source_pipeline:
+                # is None if source pipeline does not exist
+                self.instance._Bot__source_pipeline = Pipeline(None)
+            self.instance._Bot__source_pipeline.receive = lambda *args, **kwargs: msg
+            self.instance._Bot__source_pipeline.acknowledge = lambda *args, **kwargs: None
             self.instance.logger.info(" * Message from cli will be used when processing.")
 
         if dryrun:
-            self.instance.send_message = lambda msg: self.instance.logger.info("DRYRUN: Message would be sent now!")
-            self.instance.acknowledge_message = lambda: self.instance.logger.info("DRYRUN: Message would be acknowledged now!")
+            self.instance.send_message = lambda *args, **kwargs: self.instance.logger.info(
+                "DRYRUN: Message would be sent now to %r!",
+                kwargs.get('path', "_default"))
+            self.instance.acknowledge_message = lambda *args, **kwargs: self.instance.logger.info(
+                "DRYRUN: Message would be acknowledged now!")
             self.instance.logger.info(" * Dryrun only, no message will be really sent through.")
+
+        if show:
+            fn = self.instance.send_message
+            self.instance.send_message = lambda *args, **kwargs: [self.pprint(args or "No message generated"),
+                                                                  fn(*args, **kwargs)]
 
         self.instance.logger.info("Processing...")
         self.instance.process()
 
     def arg2msg(self, msg):
         try:
-            default_type = "Report" if self.runtime_configuration["group"] is "Parser" else "Event"
+            default_type = "Report" if self.runtime_configuration["group"] == "Parser" else "Event"
             msg = MessageFactory.unserialize(msg, default_type=default_type)
         except (Exception, KeyError, TypeError, ValueError) as exc:
             if exists(msg):
                 with open(msg, "r") as f:
                     return self.arg2msg(f.read())
             self.messageWizzard("Message can not be parsed from JSON: {}".format(error_message_from_exc(exc)))
-            exit(1)
+            sys.exit(1)
         return msg
 
     def leverageLogger(self, level):
@@ -146,8 +165,8 @@ class BotDebugger:
                     h.setLevel(level)
 
     @staticmethod
-    def load_configuration_patch(*args, ** kwargs):
-        d = BotDebugger.load_configuration(*args, ** kwargs)
+    def load_configuration_patch(*args, **kwargs):
+        d = BotDebugger.load_configuration(*args, **kwargs)
         if "logging_level" in d and BotDebugger.logging_level:
             d["logging_level"] = BotDebugger.logging_level
         return d
@@ -155,7 +174,7 @@ class BotDebugger:
     def messageWizzard(self, msg):
         self.instance.logger.error(msg)
         print(self.EXAMPLE)
-        if input("Do you want to display current harmonization (available fields)? y/[n]: ") is "y":
+        if input("Do you want to display current harmonization (available fields)? y/[n]: ") == "y":
             self.pprint(self.instance.harmonization)
 
     @staticmethod

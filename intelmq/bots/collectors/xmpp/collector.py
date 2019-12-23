@@ -79,11 +79,11 @@ except ImportError:
 class XMPPCollectorBot(CollectorBot):
 
     xmpp = None
+    collector_empty_process = True
 
     def init(self):
         if sleekxmpp is None:
-            self.logger.error('Could not import sleekxmpp. Please install it.')
-            self.stop()
+            raise ValueError('Could not import sleekxmpp. Please install it.')
 
         # Retrieve Parameters from configuration
         xmpp_user = getattr(self.parameters, "xmpp_user", None)
@@ -91,8 +91,7 @@ class XMPPCollectorBot(CollectorBot):
         xmpp_password = getattr(self.parameters, "xmpp_password", None)
 
         if None in (xmpp_user, xmpp_server, xmpp_password):
-            self.logger.error('No User / Password provided.')
-            self.stop()
+            raise ValueError('No User / Password provided.')
         else:
             xmpp_login = xmpp_user + '@' + xmpp_server
 
@@ -116,8 +115,7 @@ class XMPPCollectorBot(CollectorBot):
         ca_certs = getattr(self.parameters, "ca_certs", None)
 
         if self.muc and not xmpp_room:
-            self.logger.error('No room provided.')
-            self.stop()
+            raise ValueError('No room provided.')
 
         if self.muc:
             if not xmpp_room_nick:
@@ -143,8 +141,7 @@ class XMPPCollectorBot(CollectorBot):
             self.xmpp.add_event_handler("message", self.log_message)
 
         else:
-            self.logger.error("Could not connect to XMPP-Server.")
-            self.stop()
+            raise ValueError("Could not connect to XMPP-Server.")
 
     def process(self):
         # Processing is done by function called from the eventhandler...

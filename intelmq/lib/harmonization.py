@@ -3,24 +3,33 @@
 The following types are implemented with sanitize() and is_valid() functions:
 
  - Base64
+ - Boolean
  - ClassificationType
- - DNS
  - DateTime
  - FQDN
- - FeedName
+ - Float
+ - Accuracy
  - GenericType
  - IPAddress
  - IPNetwork
+ - Integer
+ - JSON
+ - JSONDict
  - LowercaseString
  - Registry
  - String
  - URL
+ - ASN
+ - UppercaseString
+ - TLP
 """
 import binascii
 import datetime
 import ipaddress
 import json
+import re
 import socket
+import sys
 import urllib.parse as parse
 
 import dateutil.parser
@@ -31,7 +40,8 @@ import intelmq.lib.utils as utils
 
 __all__ = ['Base64', 'Boolean', 'ClassificationType', 'DateTime', 'FQDN',
            'Float', 'Accuracy', 'GenericType', 'IPAddress', 'IPNetwork',
-           'Integer', 'JSON', 'LowercaseString', 'Registry', 'String', 'URL',
+           'Integer', 'JSON', 'JSONDict', 'LowercaseString', 'Registry',
+           'String', 'URL', 'ASN', 'UppercaseString', 'TLP',
            ]
 
 
@@ -71,7 +81,29 @@ class GenericType(object):
         return str(value)
 
 
-class Base64(GenericType):
+class String(GenericType):
+    """
+    Any non-empty string without leading or trailing whitespace.
+    """
+
+    @staticmethod
+    def is_valid(value, sanitize=False):
+        if sanitize:
+            value = GenericType().sanitize(value)
+
+        if not GenericType().is_valid(value):
+            return False
+
+        if type(value) is not str:
+            return False
+
+        if len(value) == 0:
+            return False
+
+        return True
+
+
+class Base64(String):
     """
     Base64 type. Always gives unicode strings.
 
@@ -85,7 +117,7 @@ class Base64(GenericType):
 
         try:
             utils.base64_decode(value)
-        except TypeError:
+        except (TypeError, AttributeError):
             return False
 
         if not GenericType().is_valid(value):
@@ -95,7 +127,10 @@ class Base64(GenericType):
 
     @staticmethod
     def sanitize(value):
-        value = utils.base64_encode(value)
+        try:
+            value = utils.base64_encode(value)
+        except AttributeError:  # None
+            return None
         return value
 
 
@@ -133,38 +168,76 @@ class Boolean(GenericType):
         return None
 
 
-class ClassificationType(GenericType):
+class ClassificationType(String):
     """
-    classification.type type. Allowed values are:
+    `classification.type` type.
+
+    The mapping follows
+    Reference Security Incident Taxonomy Working Group – RSIT WG
+    https://github.com/enisaeu/Reference-Security-Incident-Taxonomy-Task-Force/
+    with extensions.
+
+    These old values are automatically mapped to the new ones:
+        'botnet drone' -> 'infected-system'
+        'ids alert' -> 'ids-alert'
+        'c&c' -> 'c2server'
+        'infected system' -> 'infected-system'
+        'malware configuration' -> 'malware-configuration'
+
+    Allowed values are:
      * """
 
-    allowed_values = ['spam',
-                      'malware',
-                      'botnet drone',
-                      'ransomware',
-                      'dga domain',
-                      'malware configuration',
-                      'c&c',
-                      'scanner',
-                      'exploit',
-                      'brute-force',
-                      'ids alert',
-                      'defacement',
-                      'compromised',
+    allowed_values = ["application-compromise",
                       'backdoor',
-                      'ddos',
-                      'dropzone',
-                      'phishing',
-                      'proxy',
-                      'vulnerable service',
                       'blacklist',
+                      'brute-force',
+                      "burglary",
+                      'c2server',
+                      'compromised',
+                      "copyright",
+                      "data-loss",
+                      'ddos',
+                      "ddos-amplifier",
+                      'defacement',
+                      'dga domain',
+                      "dos",
+                      'dropzone',
+                      'exploit',
+                      'harmful-speech',
+                      'ids-alert',
+                      'infected-system',
+                      "information-disclosure",
+                      'leak',
+                      'malware',
+                      'malware-configuration',
+                      'malware-distribution',
+                      "masquerade",
                       'other',
-                      'unknown',
+                      'outage',
+                      'phishing',
+                      "potentially-unwanted-accessible",
+                      "privileged-account-compromise",
+                      'proxy',
+                      'ransomware',
+                      'sabotage',
+                      'scanner',
+                      'sniffing',
+                      'social-engineering',
+                      'spam',
                       'test',
                       'tor',
-                      'leak',
-                      'unauthorized-login',
+                      "Unauthorised-information-access",
+                      "Unauthorised-information-modification",
                       'unauthorized-command',
+                      'unauthorized-login',
+                      "unauthorized-use-of-resources",
+                      'unknown',
+                      "unprivileged-account-compromise",
+                      'violence',
+                      'vulnerable client',
+                      'vulnerable service',
+                      "vulnerable-system",
+                      "weak-crypto",
                       ]
 
     __doc__ += '\n     * '.join(allowed_values)
@@ -185,8 +258,37 @@ class ClassificationType(GenericType):
 
         return True
 
+    @staticmethod
+    def sanitize(value):
+        value = LowercaseString.sanitize(value)
+        if not value:
+            return None
+        if value == 'botnet drone':
+            value = 'infected-system'
+        elif value == 'ids alert':
+            value = 'ids-alert'
+        elif value == 'c&c':
+            value = 'c2server'
+        elif value == 'infected system':
+            value = 'infected-system'
+        elif value == 'malware configuration':
+            value = 'malware-configuration'
+        return GenericType().sanitize(value)
 
-class DateTime(GenericType):
+
+class DateTime(String):
+    """
+    Date and time type for timestamps.
+
+    Valid values are timestamps with time zone and in the format '%Y-%m-%dT%H:%M:%S+00:00'.
+    Invalid are missing times and missing timezone information (UTC).
+    Microseconds are also allowed.
+
+    Sanitation normalizes the timezone to UTC, which is the only allowed timezone.
+
+    The following additional conversions are available with the convert function:
+    """
+    midnight = datetime.time(0, 0, 0, 0)
 
     @staticmethod
     def is_valid(value, sanitize=False):
@@ -203,13 +305,16 @@ class DateTime(GenericType):
 
     @staticmethod
     def sanitize(value):
-        value = DateTime.__parse(value)
+        try:
+            value = DateTime.__parse(value)
+        except TypeError:  # None
+            return None
         return GenericType().sanitize(value)
 
     @staticmethod
     def __parse(value):
         try:
-            return utils.decode(DateTime.__parse_utc_isoformat(value))
+            return utils.decode(DateTime.parse_utc_isoformat(value))
         except ValueError:
             pass
 
@@ -222,7 +327,7 @@ class DateTime(GenericType):
         return utils.decode(value)
 
     @staticmethod
-    def __parse_utc_isoformat(value):
+    def parse_utc_isoformat(value):
         """
         Parse format generated by datetime.isoformat() method with UTC timezone.
         It is much faster than universal dateutil parser.
@@ -234,6 +339,21 @@ class DateTime(GenericType):
             datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f+00:00')
 
         return value
+
+    @staticmethod
+    def from_epoch_millis(tstamp, tzone='UTC'):
+        """
+        Returns ISO formatted datetime from given epoch timestamp with milliseconds.
+        It ignores the milliseconds, converts it into normal timestamp and processes it.
+        """
+        bytecount = len(str(tstamp))
+        int_tstamp = int(tstamp)
+        if bytecount == 10:
+            return DateTime.from_timestamp(int_tstamp, tzone)
+        if bytecount == 12:
+            return DateTime.from_timestamp(int_tstamp // 100, tzone)
+        if bytecount == 13:
+            return DateTime.from_timestamp(int_tstamp // 1000, tzone)
 
     @staticmethod
     def from_timestamp(tstamp, tzone='UTC'):
@@ -271,9 +391,78 @@ class DateTime(GenericType):
     def generate_datetime_now():
         value = datetime.datetime.now(pytz.timezone('UTC'))
         value = value.replace(microsecond=0)
-        value = value.isoformat()
-        # Is byte string in 2 and unicode string in 3, make unicode string
-        return utils.decode(value)
+        return value.isoformat()
+
+    @staticmethod
+    def convert_from_format(value: str, format: str) -> str:
+        """
+        Converts a datetime with the given format.
+        """
+        value = datetime.datetime.strptime(value, format)
+        if not value.tzinfo and sys.version_info <= (3, 6):
+            value = pytz.utc.localize(value)
+        elif not value.tzinfo:
+            value = value.astimezone(pytz.utc)
+        return value.isoformat()
+
+    @staticmethod
+    def convert_from_format_midnight(value: str, format: str) -> str:
+        """
+        Converts a date with the given format and adds time 00:00:00 to it.
+        """
+        date = datetime.datetime.strptime(value, format)
+        if sys.version_info <= (3, 6):
+            value = datetime.datetime.combine(date, DateTime.midnight)
+            value = pytz.utc.localize(value)
+        else:
+            value = datetime.datetime.combine(date, DateTime.midnight,
+                                              tzinfo=pytz.utc)
+        return value.isoformat()
+
+    @staticmethod
+    def convert_fuzzy(value):
+        value = dateutil.parser.parse(value, fuzzy=True)
+        if not value.tzinfo and sys.version_info <= (3, 6):
+            value = pytz.utc.localize(value)
+        elif not value.tzinfo:
+            value.astimezone(pytz.utc)
+        return value.isoformat()
+
+    @staticmethod
+    def convert(value, format='fuzzy'):
+        """
+        Converts date time strings according to the given format.
+        If the timezone is not given or clear, the local time zone is assumed!
+
+        * timestamp
+        * windows_nt: From Windows NT / AD / LDAP
+        * epoch_millis: From Milliseconds since Epoch
+        * from_format: From a given format, eg. 'from_format|%H %M %S %m %d %Y %Z'
+        * from_format_midnight: Date from a given format and assume midnight, e.g. 'from_format_midnight|%d-%m-%Y'
+        * utc_isoformat: Parse date generated by datetime.isoformat()
+        * fuzzy (or None): Use dateutils' fuzzy parser, default if no specific parser is given
+        """
+        if format is None:
+            format = 'fuzzy'
+        if format.startswith('from_format|'):
+            return DateTime.convert_from_format(value, format=format[12:])
+        elif format.startswith('from_format_midnight|'):
+            return DateTime.convert_from_format_midnight(value, format=format[21:])
+        else:
+            return DateTime.TIME_CONVERSIONS[format](value)
+
+
+DateTime.TIME_CONVERSIONS = {'timestamp': DateTime.from_timestamp,
+                             'windows_nt': DateTime.from_windows_nt,
+                             'epoch_millis': DateTime.from_epoch_millis,
+                             'from_format': DateTime.convert_from_format,
+                             'from_format_midnight': DateTime.convert_from_format_midnight,
+                             'utc_isoformat': 'parse_utc_isoformat',
+                             'fuzzy': DateTime.convert_fuzzy,
+                             None: DateTime.convert_fuzzy,
+                             }
+__convert_doc_position = DateTime.convert.__doc__.find('\n\n') + 1
+DateTime.__doc__ += DateTime.convert.__doc__[__convert_doc_position:]
 
 
 class Float(GenericType):
@@ -307,7 +496,7 @@ class Float(GenericType):
             return None
 
 
-class Accuracy(GenericType):
+class Accuracy(Float):
     """
     Accuracy type. A Float between 0 and 100.
     """
@@ -334,18 +523,21 @@ class Accuracy(GenericType):
                 return float(value) * 100
 
             value = float(value)
-            if value >= 0 or value <= 100:
+            if value >= 0 and value <= 100:
                 return value
         except (ValueError, TypeError):
             return None
 
 
-class FQDN(GenericType):
+class FQDN(String):
     """
     Fully qualified domain name type.
 
     All valid lowercase domains are accepted, no IP addresses or URLs. Trailing
     dot is not allowed.
+
+    To prevent values like '10.0.0.1:8080' (#1235), we check for the
+    non-existence of ':'.
     """
 
     @staticmethod
@@ -356,7 +548,7 @@ class FQDN(GenericType):
         if not GenericType().is_valid(value):
             return False
 
-        if value.strip('.') != value or value != value.lower():
+        if value.strip('.') != value or value != value.lower() or ':' in value:
             return False
 
         if IPAddress().is_valid(value):
@@ -427,7 +619,43 @@ class Integer(GenericType):
             return None
 
 
-class IPAddress(GenericType):
+class ASN(Integer):
+    """
+    ASN type. Derived from Integer with forbidden values.
+
+    Only valid are: 0 < asn <= 4294967295
+    See https://en.wikipedia.org/wiki/Autonomous_system_(Internet)
+    > The first and last ASNs of the original 16-bit integers, namely 0 and
+    > 65,535, and the last ASN of the 32-bit numbers, namely 4,294,967,295 are
+    > reserved and should not be used by operators.
+    """
+    @staticmethod
+    def check_asn(value):
+        if 0 < value <= 4294967295:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def is_valid(value, sanitize=False):
+        if sanitize:
+            value = ASN().sanitize(value)
+        if not Integer.is_valid(value):
+            return False
+        if not ASN.check_asn(value):
+            return False
+        return True
+
+    @staticmethod
+    def sanitize(value):
+        if isinstance(value, str) and value.lower().startswith('as'):
+            value = value[2:]
+        value = Integer.sanitize(value)
+        if value and ASN.check_asn(value):
+            return value
+
+
+class IPAddress(String):
     """
     Type for IP addresses, all families. Uses the ipaddress module.
 
@@ -459,10 +687,23 @@ class IPAddress(GenericType):
 
         try:
             value = GenericType().sanitize(value)
-            network = ipaddress.ip_network(str(value))
         except ValueError:
             return None
 
+        try:
+            # Remove the scope ID if it's detected.
+            text_scope_id = value.split('%')
+            if len(text_scope_id) > 1:
+                value = text_scope_id[0]
+        except AttributeError:  # None
+            return None
+
+        # Check if it is syntacticlly a valid IP Address/Network
+        try:
+            network = ipaddress.ip_network(str(value))
+        except ValueError:
+            return None
+        # And then make sure it is an address or remove the CIDR (converts addresses with CIDR to addresses without CIDR)
         if network.num_addresses == 1:
             value = str(network.network_address)
         else:
@@ -492,7 +733,7 @@ class IPAddress(GenericType):
         return str(dns.reversename.from_address(ip_addr))
 
 
-class IPNetwork(GenericType):
+class IPNetwork(String):
     """
     Type for IP networks, all families. Uses the ipaddress module.
 
@@ -533,9 +774,47 @@ class IPNetwork(GenericType):
         return ipaddress.ip_network(str(value)).version
 
 
-class JSON(GenericType):
+class JSON(String):
     """
     JSON type.
+
+    Sanitation accepts any valid JSON objects.
+
+    Valid values are only unicode strings with JSON objects.
+    """
+
+    @staticmethod
+    def is_valid(value, sanitize=False):
+        if sanitize:
+            value = JSON().sanitize(value)
+
+        if not isinstance(value, str):
+            return False
+
+        try:
+            json.loads(value)
+        except ValueError:
+            return False
+
+        return True
+
+    @staticmethod
+    def sanitize(value):
+        if value is None:
+            return None
+        if isinstance(value, (str, bytes)):
+            sanitized = GenericType.sanitize(value)
+            if JSON.is_valid(sanitized):
+                return sanitized
+        try:
+            return GenericType().sanitize(json.dumps(value, sort_keys=True))
+        except TypeError:
+            return None
+
+
+class JSONDict(JSON):
+    """
+    JSONDict type.
 
     Sanitation accepts pythons dictionaries and JSON strings.
 
@@ -545,7 +824,7 @@ class JSON(GenericType):
     @staticmethod
     def is_valid(value, sanitize=False):
         if sanitize:
-            value = JSON().sanitize(value)
+            value = JSONDict().sanitize(value)
 
         if not isinstance(value, str):
             return False
@@ -561,20 +840,33 @@ class JSON(GenericType):
         return False
 
     @staticmethod
+    def is_valid_subitem(value):
+        return True
+
+    @staticmethod
     def sanitize(value):
         if not value:
             return None
         if isinstance(value, (str, bytes)):
             sanitized = GenericType.sanitize(value)
-            if JSON.is_valid(sanitized):
+            if JSONDict.is_valid(sanitized):
                 return sanitized
         try:
             return GenericType().sanitize(json.dumps(value, sort_keys=True))
         except TypeError:
             return None
 
+    @staticmethod
+    def sanitize_subitem(value):
+        return value
 
-class LowercaseString(GenericType):
+
+class LowercaseString(String):
+    """
+    Like string, but only allows lower case characters.
+
+    Sanitation lowers all characters.
+    """
 
     @staticmethod
     def is_valid(value, sanitize=False):
@@ -592,30 +884,14 @@ class LowercaseString(GenericType):
 
     @staticmethod
     def sanitize(value):
-        value = value.lower()
+        try:
+            value = value.lower()
+        except AttributeError:  # None
+            return None
         return String().sanitize(value)
 
 
-class String(GenericType):
-
-    @staticmethod
-    def is_valid(value, sanitize=False):
-        if sanitize:
-            value = GenericType().sanitize(value)
-
-        if not GenericType().is_valid(value):
-            return False
-
-        if type(value) is not str:
-            return False
-
-        if len(value) == 0:
-            return False
-
-        return True
-
-
-class URL(GenericType):
+class URL(String):
     """
     URI type. Local and remote.
 
@@ -674,7 +950,12 @@ class URL(GenericType):
         return None
 
 
-class UppercaseString(GenericType):
+class UppercaseString(String):
+    """
+    Like string, but only allows upper case characters.
+
+    Sanitation uppers all characters.
+    """
 
     @staticmethod
     def is_valid(value, sanitize=False):
@@ -691,7 +972,10 @@ class UppercaseString(GenericType):
 
     @staticmethod
     def sanitize(value):
-        value = value.upper()
+        try:
+            value = value.upper()
+        except AttributeError:  # None
+            return None
         return String().sanitize(value)
 
 
@@ -723,3 +1007,35 @@ class Registry(UppercaseString):
         if value in ['RIPENCC', 'RIPE-NCC']:
             value = 'RIPE'
         return value
+
+
+class TLP(UppercaseString):
+    """
+    TLP level type. Derived from UppercaseString.
+
+    Only valid values: WHITE, GREEN, AMBER, RED.
+
+    Accepted for sanitation are different cases and the prefix 'tlp:'.
+    """
+    enum = ['WHITE', 'GREEN', 'AMBER', 'RED']
+    prefix_pattern = re.compile(r'^(TLP:?)?\s*', flags=re.IGNORECASE)
+
+    @staticmethod
+    def is_valid(value, sanitize=False):
+        if sanitize:
+            value = TLP.sanitize(value)
+
+        if not UppercaseString.is_valid(value):
+            return False
+
+        if value not in TLP.enum:
+            return False
+
+        return True
+
+    @staticmethod
+    def sanitize(value):
+        value = UppercaseString.sanitize(value)
+        if value:
+            value = TLP.prefix_pattern.sub('', value)
+            return value

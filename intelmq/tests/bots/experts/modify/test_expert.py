@@ -9,31 +9,45 @@ from pkg_resources import resource_filename
 
 import intelmq.lib.test as test
 from intelmq.lib.utils import load_configuration
-from intelmq.bots.experts.modify.expert import ModifyExpertBot, convert_config
+from intelmq.bots.experts.modify.expert import ModifyExpertBot, modify_expert_convert_config
 
 EVENT_TEMPL = {"__type": "Event",
                "feed.name": "Spamhaus Cert",
                "feed.url": "https://portal.spamhaus.org/cert/api.php?cert="
                            "<CERTNAME>&key=<APIKEY>",
-               "classification.type": "botnet drone",
+               "classification.taxonomy": "malicious code",
+               "classification.type": "infected-system",
                "time.observation": "2015-01-01T00:00:00+00:00",
                }
-INPUT = [{'malware.name': 'confickerab'},
-         {'malware.name': 'gozi2'},
-         {'feed.name': 'Abuse.ch',
+INPUT = [{'feed.name': 'Abuse.ch',
           'feed.url': 'https://feodotracker.abuse.ch/blocklist/?download=domainblocklist'},
-         {'malware.name': 'zeus_gameover_us'},
-         {'malware.name': 'sality-p2p'},
          {'malware.name': 'foobar', 'feed.name': 'Other Feed'},
          {'source.port': 80, 'malware.name': 'zeus'},
+         {'malware.name': 'xcodeghost'},
+         {'malware.name': 'securityscorecard-someexample-value'},
+         {'malware.name': 'anyvalue'},  # 5
+         {},
+         {'source.tor_node': True},
+         {'source.tor_node': False},
+         {},
+         {'feed.accuracy': 5.22},  # 10
+         {'feed.accuracy': 100},
+         {'comment': 'integer value'},
          ]
-OUTPUT = [{'classification.identifier': 'conficker'},
-          {'classification.identifier': 'gozi'},
-          {'classification.identifier': 'feodo'},
-          {'classification.identifier': 'zeus'},
-          {'classification.identifier': 'sality'},
-          {},
-          {'protocol.application': 'http', 'classification.identifier': 'zeus'},
+OUTPUT = [{'classification.identifier': 'feodo'},
+          {'classification.identifier': 'foobar'},
+          {'protocol.transport': 'tcp', 'protocol.application': 'http',
+           'classification.identifier': 'zeus'},
+          {'classification.identifier': 'xcodeghost'},
+          {'classification.identifier': 'someexample-value'},
+          {'classification.identifier': 'anyvalue'},  # 5
+          {'classification.type': 'vulnerable service'},
+          {'event_description.text': 'This is a TOR node.'},
+          {'event_description.text': 'This is not a TOR node.'},
+          {'event_description.text': 'We don\'t know if this is a TOR node.'},
+          {'event_description.text': 'Accuracy is 10% or lower.'},  # 10
+          {'event_description.text': 'Accuracy is the highest.'},
+          {'extra.test': 1, 'event_description.text': 'We don\'t know if this is a TOR node.'},
           ]
 for index in range(len(INPUT)):
     copy1 = EVENT_TEMPL.copy()
@@ -60,10 +74,11 @@ class TestModifyExpertBot(test.BotTestCase, unittest.TestCase):
 
     def test_events(self):
         """ Test if correct Events have been produced. """
-        self.input_message = INPUT
-        self.run_bot(iterations=len(INPUT))
+        self.input_message = INPUT[:6]
+        self.allowed_warning_count = 1
+        self.run_bot(iterations=6)
 
-        for position, event_out in enumerate(OUTPUT):
+        for position, event_out in enumerate(OUTPUT[:6]):
             self.assertMessageEqual(position, event_out)
 
     def test_conversion(self):
@@ -74,104 +89,44 @@ class TestModifyExpertBot(test.BotTestCase, unittest.TestCase):
         new_path = resource_filename('intelmq',
                                      'tests/bots/experts/modify/new_format.conf')
         new_config = load_configuration(new_path)
-        self.assertDictEqual(convert_config(old_config)[0],
+        self.assertDictEqual(modify_expert_convert_config(old_config)[0],
                              new_config[0])
 
-EVENT_TEMPL2 = {"__type": "Event",
-               "feed.name": "Testing IntelMQ Mock Feed",
-               "feed.url": "https://example.org/does-not-exist",
-               "classification.type": "botnet drone",
-               "time.observation": "2015-01-02T01:20:00+00:00",
-               }
-
-INPUT2 = [
-    {'malware.name': 'bitdefender-foreign'},
-    {'malware.name': 'bitdefender-pykspa_improved'},
-    {'malware.name': 'bitdefender-sumxa'},
-    {'malware.name': 'downloaderbot-mxb'},
-    {'malware.name': 'downloaderbot-2'},
-    {'malware.name': 'dridex-data'},
-    {'malware.name': 'gameover-zeus-dga'},
-    {'malware.name': 'gameover-zeus-peer'},
-    {'malware.name': 'gozi2'},
-    {'malware.name': 'sality_virus'},
-    {'malware.name': 'salityv3'},
-    {'malware.name': 'tinba-dga'},
-    {'malware.name': 'urlzone'},
-    {'malware.name': 'urlzone2'},
-    {'malware.name': 'citadel-b54'},
-    {'malware.name': 'caphaw'},
-    {'malware.name': 'b68-zeroaccess-3-abbit'},
-    {'malware.name': 'downadup'},
-    {'malware.name': 'sality'},
-    {'malware.name': 'sality2'},
-    {'malware.name': 'xcodeghost'},
-    {'malware.name': 'citadel certpl'},
-    {'malware.name': 'dridex-data'},
-    {'malware.name': 'bitdefender-nivdort'},
-    {'malware.name': 'securityscorecard-someexample-value'},
-    {'malware.name': 'anyvalue'},
-         ]
-OUTPUT2 = [
-    {'protocol.transport': 'tcp', 'classification.identifier': 'trojan.generic'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'pykspa'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'dridex'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'downloader-bot'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'downloader-bot'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'dridex'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'gameover zeus dga'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'gameover zeus p2p'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'gozi'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'sality'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'sality'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'tinba'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'urlzone/bebloh'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'urlzone/bebloh'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'citadel'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'caphaw/shylock'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'zeroaccess'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'conficker'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'sality'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'sality'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'xcodeghost'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'citadel'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'dridex'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'nivdort'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'someexample-value'},
-    {'protocol.transport': 'tcp', 'classification.identifier': 'anyvalue'},
-          ]
-for index in range(len(INPUT2)):
-    copy1 = EVENT_TEMPL2.copy()
-    copy2 = EVENT_TEMPL2.copy()
-    copy1.update(INPUT2[index])
-    copy2.update(INPUT2[index])
-    copy2.update(OUTPUT2[index])
-    INPUT2[index] = copy1
-    OUTPUT2[index] = copy2
-
-
-class TestMoreFeedsModifyExpertBot(test.BotTestCase, unittest.TestCase):
-    """Testing ModifyExpertBot for 'morefeeds' configuration.
-    """
-
-    @classmethod
-    def set_bot(cls):
-        cls.bot_reference = ModifyExpertBot
+    def test_types(self):
+        """
+        boolean, int etc
+        """
         config_path = resource_filename('intelmq',
-                                        'bots/experts/modify/examples/morefeeds.conf')
-        cls.sysconfig = {'configuration_path': config_path
-                         }
-
-    def test_bot_name(self):
-        "Do **not** test that our second test has the same name as the bot."
-
-    def test_events(self):
-        """ Test if correct Events have been produced. """
-        self.input_message = INPUT2
-        self.run_bot(iterations=len(INPUT2))
-
-        for position, event_out in enumerate(OUTPUT2):
+                                        'tests/bots/experts/modify/types.conf')
+        parameters = {'configuration_path': config_path,
+                      'overwrite': True}
+        self.input_message = INPUT[7:13]
+        self.run_bot(parameters=parameters,
+                     iterations=len(INPUT[7:13]))
+        for position, event_out in enumerate(OUTPUT[7:13]):
             self.assertMessageEqual(position, event_out)
+
+    def test_overwrite(self):
+        """
+        test if bot overwrites by default
+        """
+        config_path = resource_filename('intelmq',
+                                        'tests/bots/experts/modify/overwrite.conf')
+        self.input_message = INPUT[6]
+        self.allowed_warning_count = 1
+        self.run_bot(parameters={'configuration_path': config_path})
+        self.assertMessageEqual(0, OUTPUT[6])
+
+    def test_overwrite_not(self):
+        """
+        test if bot does not overwrites if parameter is set
+        """
+        config_path = resource_filename('intelmq',
+                                        'tests/bots/experts/modify/overwrite.conf')
+        self.input_message = EVENT_TEMPL
+        self.run_bot(parameters={'configuration_path': config_path,
+                                 'overwrite': False})
+        self.assertMessageEqual(0, EVENT_TEMPL)
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -12,7 +12,8 @@ Harmonization field names
 |Destination|destination.account|[String](#string)|An account name or email address, which has been identified to relate to the destination of an abuse event.|
 |Destination|destination.allocated|[DateTime](#datetime)|Allocation date corresponding to BGP prefix.|
 |Destination|destination.as_name|[String](#string)|The autonomous system name to which the connection headed.|
-|Destination|destination.asn|[Integer](#integer)|The autonomous system number to which the connection headed.|
+|Destination|destination.asn|[ASN](#asn)|The autonomous system number to which the connection headed.|
+|Destination|destination.domain_suffix|[FQDN](#fqdn)|The suffix of the domain from the public suffix list.|
 |Destination|destination.fqdn|[FQDN](#fqdn)|A DNS name related to the host from which the connection originated. DNS allows even binary data in DNS, so we have to allow everything. A final point is stripped, string is converted to lower case characters.|
 |Destination Geolocation|destination.geolocation.cc|[UppercaseString](#uppercasestring)|Country-Code according to ISO3166-1 alpha-2 for the destination IP.|
 |Destination Geolocation|destination.geolocation.city|[String](#string)|Some geolocation services refer to city-level geolocation.|
@@ -30,11 +31,12 @@ Harmonization field names
 |Destination|destination.reverse_dns|[FQDN](#fqdn)|Reverse DNS name acquired through a reverse DNS query on an IP address. N.B. Record types other than PTR records may also appear in the reverse DNS tree. Furthermore, unfortunately, there is no rule prohibiting people from writing anything in a PTR record. Even JavaScript will work. A final point is stripped, string is converted to lower case characters.|
 |Destination|destination.tor_node|[Boolean](#boolean)|If the destination IP was a known tor node.|
 |Destination|destination.url|[URL](#url)|A URL denotes on IOC, which refers to a malicious resource, whose interpretation is defined by the abuse type. A URL with the abuse type phishing refers to a phishing resource.|
+|Destination|destination.urlpath|[String](#string)|The path portion of an HTTP or related network request.|
 |Event_Description|event_description.target|[String](#string)|Some sources denominate the target (organization) of a an attack.|
 |Event_Description|event_description.text|[String](#string)|A free-form textual description of an abuse event.|
 |Event_Description|event_description.url|[URL](#url)|A description URL is a link to a further description of the the abuse event in question.|
 | |event_hash|[UppercaseString](#uppercasestring)|Computed event hash with specific keys and values that identify a unique event. At present, the hash should default to using the SHA1 function. Please note that for an event hash to be able to match more than one event (deduplication) the receiver of an event should calculate it based on a minimal set of keys and values present in the event. Using for example the observation time in the calculation will most likely render the checksum useless for deduplication purposes.|
-| |extra|[JSON](#json)|All anecdotal information, which cannot be parsed into the data harmonization elements. E.g. os.name, os.version, etc.  **Note**: this is only intended for mapping any fields which can not map naturally into the data harmonization. It is not intended for extending the data harmonization with your own fields.|
+| |extra|[JSONDict](#jsondict)|All anecdotal information, which cannot be parsed into the data harmonization elements. E.g. os.name, os.version, etc.  **Note**: this is only intended for mapping any fields which can not map naturally into the data harmonization. It is not intended for extending the data harmonization with your own fields.|
 |Feed|feed.accuracy|[Accuracy](#accuracy)|A float between 0 and 100 that represents how accurate the data in the feed is|
 |Feed|feed.code|[String](#string)|Code name for the feed, e.g. DFGS, HSDAG etc.|
 |Feed|feed.documentation|[String](#string)|A URL or hint where to find the documentation of this feed.|
@@ -58,7 +60,8 @@ Harmonization field names
 |Source|source.account|[String](#string)|An account name or email address, which has been identified to relate to the source of an abuse event.|
 |Source|source.allocated|[DateTime](#datetime)|Allocation date corresponding to BGP prefix.|
 |Source|source.as_name|[String](#string)|The autonomous system name from which the connection originated.|
-|Source|source.asn|[Integer](#integer)|The autonomous system number from which originated the connection.|
+|Source|source.asn|[ASN](#asn)|The autonomous system number from which originated the connection.|
+|Source|source.domain_suffix|[FQDN](#fqdn)|The suffix of the domain from the public suffix list.|
 |Source|source.fqdn|[FQDN](#fqdn)|A DNS name related to the host from which the connection originated. DNS allows even binary data in DNS, so we have to allow everything. A final point is stripped, string is converted to lower case characters.|
 |Source Geolocation|source.geolocation.cc|[UppercaseString](#uppercasestring)|Country-Code according to ISO3166-1 alpha-2 for the source IP.|
 |Source Geolocation|source.geolocation.city|[String](#string)|Some geolocation services refer to city-level geolocation.|
@@ -78,13 +81,26 @@ Harmonization field names
 |Source|source.reverse_dns|[FQDN](#fqdn)|Reverse DNS name acquired through a reverse DNS query on an IP address. N.B. Record types other than PTR records may also appear in the reverse DNS tree. Furthermore, unfortunately, there is no rule prohibiting people from writing anything in a PTR record. Even JavaScript will work. A final point is stripped, string is converted to lower case characters.|
 |Source|source.tor_node|[Boolean](#boolean)|If the source IP was a known tor node.|
 |Source|source.url|[URL](#url)|A URL denotes an IOC, which refers to a malicious resource, whose interpretation is defined by the abuse type. A URL with the abuse type phishing refers to a phishing resource.|
+|Source|source.urlpath|[String](#string)|The path portion of an HTTP or related network request.|
 | |status|[String](#string)|Status of the malicious resource (phishing, dropzone, etc), e.g. online, offline.|
-|Time|time.observation|[DateTime](#datetime)|The time a source bot saw the event. This timestamp becomes especially important should you perform your own attribution on a host DNS name for example. The mechanism to denote the attributed elements with reference to the source provided is detailed below in Reported Identity IOC.(ISO8660).|
-|Time|time.source|[DateTime](#datetime)|Time reported by a source. Some sources only report a date, which may be used here if there is no better observation.|
+|Time|time.observation|[DateTime](#datetime)|The time the collector of the local instance processed (observed) the event.|
+|Time|time.source|[DateTime](#datetime)|The time of occurence of the event as reported the feed (source).|
+| |tlp|[TLP](#tlp)|Traffic Light Protocol level of the event.|
 
 
 Harmonization types
 -------------------
+
+### ASN
+
+ASN type. Derived from Integer with forbidden values.
+
+Only valid are: 0 < asn <= 4294967295
+See https://en.wikipedia.org/wiki/Autonomous_system_(Internet)
+> The first and last ASNs of the original 16-bit integers, namely 0 and
+> 65,535, and the last ASN of the 32-bit numbers, namely 4,294,967,295 are
+> reserved and should not be used by operators.
+
 
 ### Accuracy
 
@@ -107,36 +123,92 @@ Sanitation accepts string 'true' and 'false' and integers 0 and 1.
 
 ### ClassificationType
 
-classification.type type. Allowed values are:
- * spam
- * malware
- * botnet drone
- * ransomware
- * dga domain
- * malware configuration
- * c&c
- * scanner
- * exploit
- * brute-force
- * ids alert
- * defacement
- * compromised
+`classification.type` type.
+
+The mapping follows
+Reference Security Incident Taxonomy Working Group – RSIT WG
+https://github.com/enisaeu/Reference-Security-Incident-Taxonomy-Task-Force/
+with extensions.
+
+These old values are automatically mapped to the new ones:
+    'botnet drone' -> 'infected-system'
+    'ids alert' -> 'ids-alert'
+    'c&c' -> 'c2server'
+    'infected system' -> 'infected-system'
+    'malware configuration' -> 'malware-configuration'
+
+Allowed values are:
+ * application-compromise
  * backdoor
- * ddos
- * dropzone
- * phishing
- * proxy
- * vulnerable service
  * blacklist
+ * brute-force
+ * burglary
+ * c2server
+ * compromised
+ * copyright
+ * data-loss
+ * ddos
+ * ddos-amplifier
+ * defacement
+ * dga domain
+ * dos
+ * dropzone
+ * exploit
+ * harmful-speech
+ * ids-alert
+ * infected-system
+ * information-disclosure
+ * leak
+ * malware
+ * malware-configuration
+ * malware-distribution
+ * masquerade
  * other
- * unknown
+ * outage
+ * phishing
+ * potentially-unwanted-accessible
+ * privileged-account-compromise
+ * proxy
+ * ransomware
+ * sabotage
+ * scanner
+ * sniffing
+ * social-engineering
+ * spam
  * test
  * tor
- * leak
- * unauthorized-login
+ * Unauthorised-information-access
+ * Unauthorised-information-modification
  * unauthorized-command
+ * unauthorized-login
+ * unauthorized-use-of-resources
+ * unknown
+ * unprivileged-account-compromise
+ * violence
+ * vulnerable client
+ * vulnerable service
+ * vulnerable-system
+ * weak-crypto
 
 ### DateTime
+
+Date and time type for timestamps.
+
+Valid values are timestamps with time zone and in the format '%Y-%m-%dT%H:%M:%S+00:00'.
+Invalid are missing times and missing timezone information (UTC).
+Microseconds are also allowed.
+
+Sanitation normalizes the timezone to UTC, which is the only allowed timezone.
+
+The following additional conversions are available with the convert function:
+
+    * timestamp
+    * windows_nt: From Windows NT / AD / LDAP
+    * epoch_millis: From Milliseconds since Epoch
+    * from_format: From a given format, eg. 'from_format|%H %M %S %m %d %Y %Z'
+    * from_format_midnight: Date from a given format and assume midnight, e.g. 'from_format_midnight|%d-%m-%Y'
+    * utc_isoformat: Parse date generated by datetime.isoformat()
+    * fuzzy (or None): Use dateutils' fuzzy parser, default if no specific parser is given
 
 
 ### FQDN
@@ -145,6 +217,9 @@ Fully qualified domain name type.
 
 All valid lowercase domains are accepted, no IP addresses or URLs. Trailing
 dot is not allowed.
+
+To prevent values like '10.0.0.1:8080' (#1235), we check for the
+non-existence of ':'.
 
 
 ### Float
@@ -186,12 +261,25 @@ Sanitation accepts strings and everything int() accepts.
 
 JSON type.
 
+Sanitation accepts any valid JSON objects.
+
+Valid values are only unicode strings with JSON objects.
+
+
+### JSONDict
+
+JSONDict type.
+
 Sanitation accepts pythons dictionaries and JSON strings.
 
 Valid values are only unicode strings with JSON dictionaries.
 
 
 ### LowercaseString
+
+Like string, but only allows lower case characters.
+
+Sanitation lowers all characters.
 
 
 ### Registry
@@ -203,6 +291,17 @@ RIPE-NCC and RIPENCC are normalized to RIPE.
 
 
 ### String
+
+Any non-empty string without leading or trailing whitespace.
+
+
+### TLP
+
+TLP level type. Derived from UppercaseString.
+
+Only valid values: WHITE, GREEN, AMBER, RED.
+
+Accepted for sanitation are different cases and the prefix 'tlp:'.
 
 
 ### URL
@@ -217,5 +316,8 @@ Valid values must have the host (network location part).
 
 ### UppercaseString
 
+Like string, but only allows upper case characters.
+
+Sanitation uppers all characters.
 
 

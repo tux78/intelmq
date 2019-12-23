@@ -34,6 +34,7 @@ FEED_FIELDS = {'feed.accuracy': 80,
                'feed.provider': 'Feed Provider',
                'feed.url': 'https://www.example.com',
                'rtir_id': 1337,
+               'extra.mail_subject': 'This is a test',
                }
 
 
@@ -113,6 +114,42 @@ class TestMessageFactory(unittest.TestCase):
         """ Test if MessageFactory returns a Event subclassed from dict. """
         event = self.new_event()
         self.assertTrue(isinstance(event, (message.Message, dict)))
+
+    def test_message_eq(self):
+        """ Test if Message.__eq__ works. """
+        event1 = self.add_event_examples(self.new_event())
+        event2 = self.add_event_examples(self.new_event())
+        self.assertTrue(event1 == event2)
+
+    def test_message_ne(self):
+        """ Test if Message.__ne__ works. """
+        event1 = self.add_event_examples(self.new_event())
+        event2 = self.add_event_examples(self.new_event())
+        self.assertFalse(event1 != event2)
+
+    def test_event_report_eq(self):
+        """ Test if empty Message is not equal empty Report. """
+        event = self.new_event()
+        report = self.new_report(auto=True)
+        self.assertFalse(event == report)
+
+    def test_event_report_ne(self):
+        """ Test if empty Message is not equal empty Report. """
+        event = self.new_event()
+        report = self.new_report(auto=True)
+        self.assertTrue(event != report)
+
+    def test_event_eq_different_config(self):
+        """ Test if empty Message is not equal empty Report. """
+        event1 = message.Event(harmonization=HARM)
+        event2 = message.Event(harmonization={"event": {"extra": {"type": "JSON"}}})
+        self.assertFalse(event1 == event2)
+
+    def test_event_ne_different_config(self):
+        """ Test if empty Message is not equal empty Report. """
+        event1 = message.Event(harmonization=HARM)
+        event2 = message.Event(harmonization={"event": {"extra": {"type": "JSON"}}})
+        self.assertTrue(event1 != event2)
 
     def test_invalid_type(self):
         """ Test if Message raises InvalidArgument for invalid type. """
@@ -221,14 +258,6 @@ class TestMessageFactory(unittest.TestCase):
         report.add('raw', LOREM_BASE64)
         with self.assertRaises(exceptions.KeyExists):
             report.add('raw', LOREM_BASE64)
-
-    def test_report_add_duplicate_force(self):
-        """ Test if report can add raw value. """
-        report = self.new_report(auto=True)
-        report.add('raw', LOREM_BASE64, sanitize=False)
-        report.add('raw', DOLOR_BASE64, overwrite=True, sanitize=False)
-        self.assertDictContainsSubset({'raw': DOLOR_BASE64},
-                                      report)
 
     def test_report_del_(self):
         """ Test if report can del a value. """
@@ -504,10 +533,12 @@ class TestMessageFactory(unittest.TestCase):
                          event.serialize())
 
     def test_event_from_report(self):
+        """ Data from report should be in event, except for extra. """
         report = self.new_report()
         report.update(FEED_FIELDS)
         event = message.Event(report, harmonization=HARM)
-        self.assertDictContainsSubset(event, FEED_FIELDS)
+        del report['extra']
+        self.assertDictContainsSubset(event, report)
 
     def test_event_hash_regex(self):
         """ Test if the regex for event_hash is tested correctly. """
@@ -605,7 +636,121 @@ class TestMessageFactory(unittest.TestCase):
         """ Test Message.update """
         event = self.new_event()
         with self.assertRaises(exceptions.InvalidValue):
-            event.update({'source.asn': 'AS1'})
+            event.update({'source.asn': 'AS0'})
+
+    def test_message_extra_construction(self):
+        """
+        Test if field with name starting with 'extra.' is accepted and saved.
+        """
+        event = self.new_event()
+        event.add('extra.test', 'foobar')
+        event.add('extra.test2', 'foobar2')
+        self.assertEqual(event.to_dict(hierarchical=True),
+                         {'extra': {"test": "foobar", "test2": "foobar2"}}
+                         )
+        self.assertEqual(event.to_dict(hierarchical=False),
+                         {'extra.test': "foobar", "extra.test2": "foobar2"}
+                         )
+
+    def test_message_extra_getitem(self):
+        """
+        Test if extra field is saved and can be get.
+        """
+        event = self.new_event()
+        event.add('extra.test', 'foobar')
+        self.assertEqual(event['extra.test'], 'foobar')
+
+    def test_message_extra_get(self):
+        """
+        Test if extra field can be get with .get().
+        """
+        event = self.new_event()
+        event.add('extra.test', 'foobar')
+        self.assertEqual(event.get('extra'), '{"test": "foobar"}')
+
+    def test_message_extra_set_oldstyle_string(self):
+        """
+        Test if extra accepts a string (backwards-compat) and field can be get.
+        """
+        event = self.new_event()
+        event.add('extra', '{"foo": "bar"}')
+        self.assertEqual(event['extra'], '{"foo": "bar"}')
+        self.assertEqual(event['extra.foo'], 'bar')
+
+    def test_message_extra_set_oldstyle_dict(self):
+        """
+        Test if extra accepts a dict and field can be get.
+        """
+        event = self.new_event()
+        event.add('extra', {"foo": "bar"})
+        self.assertEqual(event['extra'], '{"foo": "bar"}')
+        self.assertEqual(event['extra.foo'], 'bar')
+
+    def test_message_extra_set_oldstyle_dict_overwrite_empty(self):
+        """
+        Test if extra behaves backwards compatible concerning overwrite and empty items
+        """
+        event = self.new_event()
+        event["extra"] = {"a": {"x": 1}, "b": "foo"}
+        self.assertEqual(json.loads(event['extra']),
+                         {"a": {"x": 1}, "b": "foo"})
+        event.add("extra", {"a": {}}, overwrite=True)
+        self.assertEqual(json.loads(event['extra']),
+                         {"a": {}})
+
+    def test_message_extra_set_dict_empty(self):
+        """
+        Test if extra accepts a dict and field can be get.
+        """
+        event = self.new_event()
+        event.add('extra', {"foo": ''})
+        self.assertEqual(json.loads(event['extra']),
+                         {"foo": ''})
+
+    def test_message_extra_in_backwardcomp(self):
+        """
+        Test if 'extra' in event works for backwards compatibility.
+        """
+        event = self.new_event()
+        self.assertFalse('extra' in event)
+        event.add('extra.foo', 'bar')
+        self.assertTrue('extra' in event)
+
+    def test_overwrite_true(self):
+        """
+        Test if values can be overwritten.
+        """
+        event = self.new_event()
+        event.add('comment', 'foo')
+        event.add('comment', 'bar', overwrite=True)
+        self.assertEqual(event['comment'], 'bar')
+
+    def test_overwrite_none(self):
+        """
+        Test if exception is raised when values exist and can't be overwritten.
+        """
+        event = self.new_event()
+        event.add('comment', 'foo')
+        with self.assertRaises(exceptions.KeyExists):
+            event['comment'] = 'bar'
+
+    def test_overwrite_false(self):
+        """
+        Test if values are not overwritten.
+        """
+        event = self.new_event()
+        event.add('comment', 'foo')
+        event.add('comment', 'bar', overwrite=False)
+        self.assertEqual(event['comment'], 'foo')
+
+    def test_to_dict_jsondict_as_string(self):
+        """
+        Test if to_dict(jsondict_as_string) works correctly.
+        """
+        event = self.new_event()
+        event.add('extra.foo', 'bar')
+        self.assertDictEqual(event.to_dict(hierarchical=False, jsondict_as_string=True),
+                             {'extra': '{"foo": "bar"}'})
 
     def test_invalid_harm_key(self):
         """ Test if error is raised when using an invalid key. """
@@ -623,7 +768,7 @@ class TestReport(unittest.TestCase):
         event = message.Event(harmonization=HARM)
         event.add('feed.code', 'adasd')
         event.add('source.fqdn', 'example.com')
-        report = message.Report(event).to_dict()
+        report = message.Report(event, harmonization=HARM).to_dict()
         self.assertNotIn('source.fqdn', report)
         self.assertIn('feed.code', report)
 
@@ -631,9 +776,24 @@ class TestReport(unittest.TestCase):
         """ raw must not be sanitized (base64 encoded) """
         event = message.Event(harmonization=HARM)
         event.add('raw', 'foobar')
-        report = message.Report(event)
+        report = message.Report(event, harmonization=HARM)
         self.assertEqual(report['raw'], 'Zm9vYmFy')
 
 
-if __name__ == '__main__':  # pragma: no cover  # pragma: no cover
+class TestEvent(unittest.TestCase):
+    """
+    Tests the Event class.
+    """
+    def test_event_no_default_value(self):
+        event = message.Event(harmonization=HARM)
+        with self.assertRaises(KeyError):
+            event['source.ip']
+
+    def test_event_default_value(self):
+        event = message.Event(harmonization=HARM)
+        event.set_default_value(None)
+        event['source.ip']
+
+
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()
