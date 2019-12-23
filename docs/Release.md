@@ -1,9 +1,23 @@
 # Release procedure
 
-Make sure the current state is really final ;)
-You can test most of the steps described here locally before doing it real.
+**Table of Contents:**
+- [Documentation](#documentation)
+- [Commit, push, review and merge](#commit-push-review-and-merge)
+- [Tag and release](#tag-and-release)
+- [Tarballs and PyPI](#tarballs-and-pypi)
+- [Packages](#packages)
+- [Announcements](#announcements)
+- [Prepare new version](#prepare-new-version)
 
-Assumption: You are working on branch maintenance, the next version is a bug fix release. For feature releaese it is slightly different.
+
+General assumption: You are working on branch maintenance, the next version is a bug fix release. For feature releaeses it is slightly different.
+
+## Check before
+
+ * Make sure the current state is really final ;)
+   You can test most of the steps described here locally before doing it real.
+ * Check the upgrade functions in `intelmq/lib/upgrades.py`.
+ * Close the milestone on github and move any open issues to the next one.
 
 ## Documentation
 
@@ -21,7 +35,7 @@ Why a separate branch? Because if problems show up, you can still force-push to 
 
 ## Tag and release
 
-Tag the commit with `git tag -s version HEAD`, merge it into master, push the both branches *and* the tag. The tag is just `a.b.c`, not prefixed with `v` (that was necessary only with SVN a long time ago...).
+Tag the commit with `git tag -s version HEAD`, merge it into master, push the branches *and* the tag. The tag is just `a.b.c`, not prefixed with `v` (that was necessary only with SVN a long time ago...).
 
 Go to https://github.com/certtools/intelmq/tags and enter the release notes (changelog) for the new tag, then it's considered a release by github.
 
@@ -49,11 +63,16 @@ For bigger releases, probably also at IHAP, Twitter, etc. Ask your favorite soci
 ## Prepare new version
 
 Increase the version in `intelmq/version.py` and declare it as alpha version.
+Add the new version in `intelmq/lib/upgrades.py`.
 
 Add a new empty changelog and news section. For the changelog:
 
 ```
+### Configuration
+
 ### Core
+
+### Development
 
 ### Harmonization
 
@@ -72,6 +91,8 @@ Add a new empty changelog and news section. For the changelog:
 
 ### Tests
 
+### Tools
+
 ### Contrib
 
 ### Known issues
@@ -79,6 +100,8 @@ Add a new empty changelog and news section. For the changelog:
 And for the news:
 
 ```
+### Requirements
+
 ### Tools
 
 ### Harmonization

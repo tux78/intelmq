@@ -21,7 +21,7 @@ from intelmq.lib.utils import base64_decode
 PORT = 5011
 SEPARATOR = '\n'
 INPUT1 = {'classification.taxonomy': 'malicious code',
-          'classification.type': 'c&c',
+          'classification.type': 'c2server',
           'feed.name': 'Example feed',
           'feed.accuracy': 100.0,
           'feed.url': 'http://localhost/two_files.tar.gz',
@@ -39,7 +39,6 @@ INPUT2 = {'feed.name': 'Example feed 2',
           'raw': utils.base64_encode('foo text\n')}
 ORIGINAL_DATA = ('some random input{}another line').format(SEPARATOR)
 
-@unittest.skipIf(True, "hej")
 class Client:
     """ You find here an example of a non-intelmq client that might connect to the bot. """
 
@@ -47,6 +46,7 @@ class Client:
         sleep(1)
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         connection.connect(('localhost', PORT))
+        connection.settimeout(1)
         return connection
 
     def random_client(self):
@@ -54,9 +54,11 @@ class Client:
         d = bytes(ORIGINAL_DATA.split(SEPARATOR)[0], 'UTF-8')
         msg = struct.pack('>I', len(d)) + d
         connection.sendall(msg)
+        connection.recv(2)
         d = bytes(ORIGINAL_DATA.split(SEPARATOR)[1], 'UTF-8')
         msg = struct.pack('>I', len(d)) + d
         connection.sendall(msg)
+        connection.recv(2)
         connection.close()
 
 
@@ -68,21 +70,16 @@ class TestTCPOutputBot(test.BotTestCase, unittest.TestCase):
         cls.bot_reference = TCPOutputBot
         cls.sysconfig = {'hierarchical_output': False,
                          'ip': 'localhost',
-                         'port': PORT
+                         'port': PORT,
+                         'counterpart_is_intelmq': True,
                          }
 
     def _delayed_start(self):
         sleep(2)
         self.assertEqual = lambda *args, **kwargs: True
-        # print(self.bot_id)
         self.run_bot(iterations=len(self.input_message))
 
 
-major, minor, micro, *_ = sys.version_info
-
-
-@unittest.skipIf((major, minor) == (3, 4) and micro < 8, "Travis CI failed with Python3.4.6. "
-                                                         "However, the developer managed to successfully test it on 3.4.8.")
 class TestTCPCollectorBot(test.BotTestCase, unittest.TestCase):
     """
     A TestCase for TCPCollectorBot.
@@ -145,6 +142,7 @@ class TestTCPCollectorBot(test.BotTestCase, unittest.TestCase):
             chunk_length = 40
             for chunk in [msg[i:i + chunk_length] for i in range(0, len(msg), chunk_length)]:
                 self.con.sendall(chunk)
+            self.con.recv(2)
 
         TCPOutputBot._process = TCPOutputBot.process
         TCPOutputBot.process = chunked_process_replacement
@@ -182,10 +180,10 @@ class TestTCPCollectorBot(test.BotTestCase, unittest.TestCase):
                         new=self.mocked_config):
                 with mock.patch('intelmq.lib.utils.log', self.mocked_log):
                     self.bot.process()
-        self.bot.stop()  # let's call shutdown() and free up binded address
+        self.bot.stop()  # let's call shutdown() and free up bound address
 
         self.assertOutputQueueLen(client_count * msg_count + 2)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()

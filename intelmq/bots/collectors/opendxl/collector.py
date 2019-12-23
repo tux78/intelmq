@@ -10,6 +10,9 @@ dxl_topic: string
 
 import time
 
+from intelmq.lib.bot import CollectorBot
+from intelmq.lib.exceptions import MissingDependencyError
+
 try:
     from dxlclient.callbacks import EventCallback
     from dxlclient.client import DxlClient
@@ -17,14 +20,12 @@ try:
 except ImportError:
     DxlClient = None
 
-from intelmq.lib.bot import CollectorBot
-
 
 class openDXLCollectorBot(CollectorBot):
 
     def init(self):
         if DxlClient is None:
-            raise ValueError('Could not import dxlclient. Please install it.')
+            raise MissingDependencyError("dxlclient")
         self.dxlclient = None
 
     def process(self):

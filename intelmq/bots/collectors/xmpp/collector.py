@@ -29,6 +29,7 @@ xmpp_whitelist_mode: boolean
 
 
 from intelmq.lib.bot import CollectorBot
+from intelmq.lib.exceptions import MissingDependencyError
 
 try:
     import sleekxmpp
@@ -79,10 +80,11 @@ except ImportError:
 class XMPPCollectorBot(CollectorBot):
 
     xmpp = None
+    collector_empty_process = True
 
     def init(self):
         if sleekxmpp is None:
-            raise ValueError('Could not import sleekxmpp. Please install it.')
+            raise MissingDependencyError("sleekxmpp")
 
         # Retrieve Parameters from configuration
         xmpp_user = getattr(self.parameters, "xmpp_user", None)
