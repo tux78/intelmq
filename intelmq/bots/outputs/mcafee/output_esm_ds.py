@@ -47,8 +47,13 @@ class ESMDSOutputBot(Bot):
 
     def process(self):
         event = self.receive_message()
-        datasources = event.get ('output')
         self.logger.info('Message received.')
+
+        datasources = event.get ('output')
+        if datasources is None:
+            self.acknowledge_message()
+            raise ValueError('No Data provided.')
+
         try:
             self.esm.login ()
             self.esm.dsAddDataSources (datasources)
