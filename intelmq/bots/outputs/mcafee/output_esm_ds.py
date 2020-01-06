@@ -47,10 +47,11 @@ class ESMDSOutputBot(Bot):
 
     def process(self):
         event = self.receive_message()
+        datasources = event.get ('output')
         self.logger.info('Message received.')
         try:
             self.esm.login ()
-            self.esm.dsAddDataSources (self.esm.test_erc)
+            self.esm.dsAddDataSources (datasources)
             self.logger.info('ESM data sources added.')
             self.acknowledge_message()
         except Exception:
@@ -58,23 +59,6 @@ class ESMDSOutputBot(Bot):
         self.acknowledge_message()
 
 class ESM ():
-
-    test_ds = {
-        'name': 'Test intelMQ',
-        'ipAddress': '1.2.3.10',
-        'typeId': 65, # DS ID == Linux
-        'zoneId': 0,
-        'enabled': True,
-        'url': 'http://IP_of_DS_webUI',
-        'parameters': [
-            {'key': 'elm_logging', 'value': False},
-            {'key': 'els_logging', 'value': False}
-        ]
-    }
-
-    test_erc = {}
-    test_erc['144116287587483648'] = []
-    test_erc['144116287587483648'].append (test_ds)
 
     def __init__ (self, esm_ip, esm_user, esm_pw):
         self.url = "https://{}/rs/esm/v2/".format(esm_ip)
