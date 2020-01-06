@@ -970,6 +970,15 @@
         }
     },
     "Output": {
+        "McAfee ESM DS Boarding": {
+            "description": "Writes information out to the McAfee Enterprise Security Manager (ESM).",
+            "module": "intelmq.bots.outputs.mcafee.output_esm_ds",
+            "parameters": {
+                "esm_ip": "1.2.3.4",
+                "esm_password": "<Password>",
+                "esm_user": "NGCP"
+            }
+        },
         "AMQP Topic": {
             "description": "AMQP Topic is the bot responsible to send events to a AMQP topic exchange.",
             "module": "intelmq.bots.outputs.amqptopic.output",
