@@ -56,7 +56,6 @@ class ESMDSOutputBot(Bot):
             self.acknowledge_message()
         except Exception:
             self.logger.exception('Error when adding data sources.')
-        self.acknowledge_message()
 
 class ESM ():
 
