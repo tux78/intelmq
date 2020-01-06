@@ -1,8 +1,6 @@
 # intelMQ development
 
-## new BOTS
-
-### McAfee ESM Add Datasource
+## Output: McAfee ESM Add Datasource
 
 This bot is being used to board new data sources into ESM. The data is expected as JSON object 
 within the "output" field. An upfront parser has to be in place formatting the epected outcome
