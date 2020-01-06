@@ -4,7 +4,8 @@
 
 ### McAfee ESM Add Datasource
 
-This bot is being used to board new data sources into ESM. The data is expected as JSON object
+This bot is being used to board new data sources into ESM. The data is expected as JSON object 
+within the "output" field. An upfront parser has to be in place formatting the epected outcome
 
 ```
 {
@@ -21,6 +22,7 @@ This bot is being used to board new data sources into ESM. The data is expected 
             {'key': 'els_logging', 'value': False}
         ]
     }]
+}
 ```
 
 The JSON Element may cover different ERC, each ERC can cover multiple data sources
