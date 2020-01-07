@@ -3,12 +3,12 @@
 ## Output: McAfee ESM Add Datasource
 
 This bot is being used to board new data sources into ESM. The data is expected as JSON object 
-within the "output" field. An upfront parser has to be in place formatting the epected outcome
+within the "output" field. An upfront parser has to be in place generating the epected outcome
 
 ```
-{
-    '(ERC ID)':
-    [{
+[{
+    receiverId: '(ERC ID)'
+    datasources: [{
         'name': '(data source 1)',
         'ipAddress': '(IP Address)',
         'typeId': 65, # DS Type ID == Linux
@@ -20,7 +20,7 @@ within the "output" field. An upfront parser has to be in place formatting the e
             {'key': 'els_logging', 'value': False}
         ]
     }]
-}
+}]
 ```
 
-The JSON Element may cover different ERC, each ERC can cover multiple data sources
+The JSON Element may cover multiple ERC, each ERC can cover multiple data sources
