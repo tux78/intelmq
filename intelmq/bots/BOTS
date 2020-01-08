@@ -342,6 +342,11 @@
         }
     },
     "Parser": {
+        "McAfee ESM": {
+            "description": "McAfee ESM Parser is used to parse ESM data source export files",
+            "module": "intelmq.bots.parsers.mcafee.parser_esm",
+            "parameters": {}
+        },
         "Abuse.ch Domain": {
             "description": "Abuse.ch Domain Parser is the bot responsible to parse the report and sanitize the information.",
             "module": "intelmq.bots.parsers.abusech.parser_domain",

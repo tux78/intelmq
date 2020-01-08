@@ -56,13 +56,23 @@ class ESMDSOutputBot(Bot):
 
         try:
             self.esm.login ()
-            self.esm.dsAddDataSources (datasources)
-            self.logger.info('ESM data sources added.')
+            response = self.esm.dsAddDataSources (json.loads(datasources))
+            self.logger.info('ESM data sources added.\r\n' + str(response))
             self.acknowledge_message()
         except Exception:
             self.logger.exception('Error when adding data sources.')
 
 class ESM ():
+
+    ESM_DEFAULT_FIELDS = [
+        'name',
+        'ipAddress',
+        'typeId',
+        'zoneId',
+        'enabled',
+        'url'
+    ]
+
 
     def __init__ (self, esm_ip, esm_user, esm_pw):
         self.url = "https://{}/rs/esm/v2/".format(esm_ip)
@@ -87,17 +97,53 @@ class ESM ():
 
     def logout (self):
         response = self._esm_sendquery ('logout', '')
+        del self.headers['X-Xsrf-Token']
+        del self.headers['Cookie']
 
     def dsAddDataSources (self, datasource):
 
-        for erc, ds in datasource.items():
-            payload = {
-                'receiverId': erc,
-                'datasources': ds
-            }
-            response = self._esm_sendquery ('dsAddDataSources', payload)
-        return True
+        payload = self._create_ds_json (datasource)
+        response = self._esm_sendquery ('dsAddDataSources', payload)
+        return payload
 
+    def dsGetDataSourceTypes (self, receiverId):
+
+        payload = {
+            'receiverId': receiverId
+        }
+        response = self._esm_sendquery ('dsGetDataSourceTypes', payload)
+        return response.json()
+
+    def _create_ds_json (self, payload):
+
+        retVal = {}
+        retVal['receiverId'] = payload['receiverId']
+        retVal['datasources'] = []
+
+        datasource = {}
+        datasource['parameters'] = []
+        if 'typeId' not in datasource:
+            datasourcetypes = self.dsGetDataSourceTypes (payload['receiverId'])
+            for vendor in datasourcetypes['vendors']:
+                if vendor['name'] == payload['vendor']:
+                    for model in vendor['models']:
+                        if model['name'] == payload['model']:
+                            payload['typeId'] = model['id']
+                            break
+
+        for key in payload:
+            if key in self.ESM_DEFAULT_FIELDS:
+                datasource[key] = payload[key]
+            elif payload[key] != '':
+                parameter = {
+                    'key': key,
+                    'value': payload[key]
+                }
+                datasource['parameters'].append (parameter)
+
+        retVal['datasources'].append (datasource)
+        return retVal
+                
     def _esm_sendquery (self, method, payload):
 
         if 'X-Xsrf-Token' not in self.headers and method != 'login':
