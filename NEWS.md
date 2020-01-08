@@ -3,6 +3,39 @@ NEWS
 
 See the changelog for a full list of changes.
 
+2.2.0 Feature release (unreleased)
+----------------------------------
+
+### Requirements
+- IntelMQ no longer supports Python 3.4, Python `>=` 3.5 is required.
+
+### Tools
+
+### Harmonization
+
+### Configuration
+
+### Libraries
+
+### Postgres databases
+
+
+2.1.2 Bugfix release (unreleased)
+---------------------------------
+
+### Requirements
+
+### Tools
+
+### Harmonization
+
+### Configuration
+
+### Libraries
+
+### Postgres databases
+
+
 2.1.1 Bugfix release (2019-11-11)
 ---------------------------------
 

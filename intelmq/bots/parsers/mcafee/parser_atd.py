@@ -12,6 +12,7 @@ verdict_severity: defines the minimum severity of reports to be parsed
 
 """
 import json
+import stix2
 
 import intelmq.lib.utils as utils
 # imports for additional libraries and intelmq
@@ -115,5 +116,13 @@ class ATDParserBot(Bot):
 
         self.acknowledge_message()
 
+    def create_stix (self, atd_report):
+
+        malware = stix2.Malware(
+            name = "McAfee ATD Report",
+            labels = ["atd-report"],
+            kill_chain_name = "mitre-attack",
+            phase_name = tactic # TODO: get Tactic from ATD Report    
+        )
 
 BOT = ATDParserBot

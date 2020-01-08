@@ -28,10 +28,11 @@ import sys
 import tarfile
 import traceback
 import zipfile
-from typing import Any, Generator, Iterator, Optional, Sequence, Union
+from typing import Any, Dict, Generator, Iterator, Optional, Sequence, Union
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
+from termstyle import red
 
 import intelmq
 
@@ -165,7 +166,7 @@ def base64_encode(value: Union[bytes, str]) -> str:
     return decode(base64.b64encode(encode(value, force=True)), force=True)
 
 
-def flatten_queues(queues) -> Iterator[str]:
+def flatten_queues(queues: Union[list, Dict]) -> Iterator[str]:
     """
     Assure that output value will be a flattened.
 
@@ -252,6 +253,8 @@ def load_parameters(*configs: dict) -> Parameters:
 
 
 class FileHandler(logging.FileHandler):
+    shell_color_pattern = re.compile(r'\x1b\[\d+m')
+
     def emit_print(self, record):
         print(record.msg, record.args)
 
@@ -261,6 +264,13 @@ class FileHandler(logging.FileHandler):
             self.emit = self.emit_print
             raise
 
+    def emit(self, record):
+        """
+        Strips shell colorization from messages
+        """
+        record.msg = self.shell_color_pattern.sub('', record.msg)
+        super().emit(record)
+
 
 class StreamHandler(logging.StreamHandler):
     def emit(self, record):
@@ -268,9 +278,10 @@ class StreamHandler(logging.StreamHandler):
             msg = self.format(record)
             if record.levelno < logging.WARNING:  # debug, info
                 stream = sys.stdout
+                stream.write(msg)
             else:  # warning, error, critical
                 stream = sys.stderr
-            stream.write(msg)
+                stream.write(red(msg))
             stream.write(self.terminator)
             self.flush()
         except Exception:
@@ -288,7 +299,7 @@ class ListHandler(logging.StreamHandler):
         self.buffer.append((record.levelname.lower(), record.getMessage()))
 
 
-def log(name: str, log_path: Union[str, bool] = intelmq.DEFAULT_LOGGING_PATH, log_level: str = "DEBUG",
+def log(name: str, log_path: Union[str, bool] = intelmq.DEFAULT_LOGGING_PATH, log_level: str = intelmq.DEFAULT_LOGGING_LEVEL,
         stream: Optional[object] = None, syslog: Union[bool, str, list, tuple] = None,
         log_format_stream: str = LOG_FORMAT_STREAM,
         logging_level_stream: Optional[str] = None):
@@ -300,7 +311,7 @@ def log(name: str, log_path: Union[str, bool] = intelmq.DEFAULT_LOGGING_PATH, lo
         name: filename for logfile or string preceding lines in stream
         log_path: Path to log directory, defaults to DEFAULT_LOGGING_PATH
             If False, nothing is logged to files.
-        log_level: default is "DEBUG"
+        log_level: default is %r
         stream: By default (None), stdout and stderr will be used depending on the level.
             If False, stream output is not used.
             For everything else, the argument is used as stream output.
@@ -321,7 +332,7 @@ def log(name: str, log_path: Union[str, bool] = intelmq.DEFAULT_LOGGING_PATH, lo
         LOG_FORMAT: Default log format for file handler
         LOG_FORMAT_STREAM: Default log format for stream handler
         LOG_FORMAT_SYSLOG: Default log format for syslog
-    """
+    """ % intelmq.DEFAULT_LOGGING_LEVEL
     logging.captureWarnings(True)
     warnings_logger = logging.getLogger("py.warnings")
     # set the name of the warnings logger to the bot neme, see #1184
@@ -344,8 +355,6 @@ def log(name: str, log_path: Union[str, bool] = intelmq.DEFAULT_LOGGING_PATH, lo
             handler = logging.handlers.SysLogHandler(address=syslog)
         handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(LOG_FORMAT_SYSLOG))
-    else:
-        raise ValueError("Invalid configuration, neither log_path is given nor syslog is used.")
 
     if log_path or syslog:
         logger.addHandler(handler)
@@ -589,7 +598,7 @@ class RewindableFileHandle(object):
         return self.current_line
 
 
-def object_pair_hook_bots(*args, **kwargs):
+def object_pair_hook_bots(*args, **kwargs) -> Dict:
     """
     A object_pair_hook function for the BOTS file to be used in the json's dump functions.
 
@@ -635,14 +644,15 @@ def drop_privileges() -> bool:
         try:
             os.setgid(grp.getgrnam('intelmq').gr_gid)
             os.setuid(pwd.getpwnam('intelmq').pw_uid)
-        except OSError:
+        except (OSError, KeyError):
+            # KeyError: User or group 'intelmq' does not exist
             return False
     if os.geteuid() != 0:  # For the unprobably possibility that intelmq is root
         return True
     return False
 
 
-def setup_list_logging(name='intelmq', logging_level='INFO'):
+def setup_list_logging(name: str = 'intelmq', logging_level: str = 'INFO'):
     check_logger = logging.getLogger('check')  # name does not matter
     list_handler = ListHandler()
     list_handler.setLevel('INFO')
@@ -679,7 +689,7 @@ def version_smaller(version1: tuple, version2: tuple) -> Optional[bool]:
     return None
 
 
-def lazy_int(value: Any) -> Any:
+def lazy_int(value: Any) -> Optional[Any]:
     """
     Tries to conver the value to int if possible. Original value otherwise
     """
