@@ -1,5 +1,16 @@
 {
     "Collector": {
+        "McAfee ePO DXL Command": {
+            "description": "Connects to a openDXL fabric and executes ePO DXL Command",
+            "module": "intelmq.bots.collectors.mcafee.collector_epo_dxl_command",
+            "parameters": {
+                "dxl_config_file": "/etc/intelmq/openDXL/dxlclient.config",
+                "dxl_epo_command": "detectedsystem.find",
+                "dxl_epo_parameter": "{\"searchText\": \"\"}",
+                "name": "McAfee ePO DXL Command",
+                "rate_limit": 300
+            }
+        },
         "AMQP": {
             "description": "Collecting from a (remote) AMQP Server and fetching either intelmq or any other messages.",
             "module": "intelmq.bots.collectors.amqp.collector_amqp",
@@ -346,6 +357,15 @@
             "description": "McAfee ESM Parser is used to parse ESM data source export files",
             "module": "intelmq.bots.parsers.mcafee.parser_esm",
             "parameters": {}
+        },
+        "McAfee RSD": {
+            "description": "RSDParserBot parses McAfee ePO Rogue System Detection observations.",
+            "module": "intelmq.bots.parsers.mcafee.parser_rsd",
+            "parameters": {
+                "rsd_isrogue": "True",
+                "rsd_isactive": "False",
+                "rsd_isnew": "False"
+            }
         },
         "Abuse.ch Domain": {
             "description": "Abuse.ch Domain Parser is the bot responsible to parse the report and sanitize the information.",
@@ -982,6 +1002,16 @@
                 "esm_ip": "1.2.3.4",
                 "esm_password": "<Password>",
                 "esm_user": "NGCP"
+            }
+        },
+        "McAfee ePO DXL Command": {
+            "description": "Connects to a openDXL fabric and executes ePO DXL Command",
+            "module": "intelmq.bots.outputs.mcafee.collector_epo_dxl_command",
+            "parameters": {
+                "dxl_config_file": "/etc/intelmq/openDXL/dxlclient.config",
+                "dxl_epo_command": "clienttask.run",
+                "name": "McAfee ePO DXL Command",
+                "rate_limit": 300
             }
         },
         "AMQP Topic": {
