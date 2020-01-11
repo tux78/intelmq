@@ -62,3 +62,19 @@ The JSON Element has to cover the following mandatory fields:
 - url
 
 Additional fields (e.g. hostname, elm_logging) are optional. For details on available fields per McAfee Event Receiver please review the data source export file. The header (second line of the export file) contains a list of all available fields for your environment.
+
+## Output: McAfee ePO DXL Commands
+
+This bot is being used to issue McAfee ePO DXL Commands. The bot requires two parameters:
+
+- dxl_config_file: the DXL config file
+- dxl_epo_command: the actual command to issue
+
+As parameters this bot expects JSON formatted content within the intelMQ 'output' field.
+For details on available commands please review your local ePO installation:
+
+```
+-> Menu -> Server Settings -> DXL Commands
+```
+
+
