@@ -24,7 +24,7 @@ class TIEOutputBot(Bot):
 
     def init(self):
         if DxlClient is None:
-            raise ValueError("Could not import 'dxlclient'. Please install it.")
+            raise MissingDependencyError("dxlclient")
 
         self.config = DxlClientConfig.create_dxl_config_from_file(self.parameters.dxl_config_file)
         self.dxlclient = DxlClient(self.config)
