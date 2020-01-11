@@ -1,5 +1,7 @@
 # intelMQ development
 
+This file provides an overview of additional BOTS created compared to the official intelMQ. Please note that this is provided "as is", and may be subject to change without notice. Main purpose is to showcase capabilities of McAfee integration.
+
 ## Collector: McAfee ePO DXL Commands
 
 This bot is being used to issue McAfee ePO DXL Commands and collect information. The bot requires three parameters:
