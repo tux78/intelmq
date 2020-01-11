@@ -1,5 +1,29 @@
 # intelMQ development
 
+## Collector: McAfee ePO DXL Commands
+
+This bot is being used to issue McAfee ePO DXL Commands and collect information. The bot requires three parameters:
+
+- dxl_config_file: the DXL config file
+- dxl_epo_command: the actual command to issue
+- dxl_epo_parameters: additional parameters
+
+For details on available commands please review your local ePO installation:
+
+```
+-> Menu -> Server Settings -> DXL Commands
+```
+
+## Parser: McAfee Rogue System Detection Parser
+
+This parser processes the output of the DXL Command "detected.systems", which is collected by the DXL command collector bot. The incoming data is presented as JSON object. This bot requires the following parameters:
+
+- rsd_isrogue: only rogue systems will be processed
+- rsd_isactive: only active systems will be processed
+- rsd_isnew: only newly detected systems will be processed
+
+The bot generates one message per processed system, and provide a JSON object within the "output" field. This can be processed by subsequent bots.
+
 ## Parser: McAfee ESM Export file parser
 
 This bot is used to parse an export file as retrieved from the McAfee Event Receiver, which is collected by the intelMQ file collector. Please see the following link on how to create and use that file for bulk data source import.
@@ -7,7 +31,6 @@ This bot is used to parse an export file as retrieved from the McAfee Event Rece
 https://docs.mcafee.com/bundle/enterprise-security-manager-data-sources-configuration-reference-guide/page/GUID-2764DC15-6045-4271-B454-F00905C022F9.html
 
 This parser prepares the content for consumption by the McAfee ESM Add Datasource BOT
-
 
 ## Output: McAfee ESM Add Datasource
 
