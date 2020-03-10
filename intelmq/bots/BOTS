@@ -193,6 +193,14 @@
                 "rsync_path": "<path>"
             }
         },
+        "Syslog": {
+            "description": "Syslog is the bot responsible to receive events via Syslog",
+            "module": "intelmq.bots.collectors.syslog.collector",
+            "parameters": {
+                "syslog_ip": "<ip>",
+                "syslog_port": "1514"
+            }
+        },
         "TCP": {
             "description": "TCP is the bot responsible to receive events on a TCP port (ex: from TCP Output of another IntelMQ instance).",
             "module": "intelmq.bots.collectors.tcp.collector",
@@ -673,6 +681,13 @@
             "description": "Surbl parser is the bot responsible to parse the report and sanitize the information.",
             "module": "intelmq.bots.parsers.surbl.parser",
             "parameters": {}
+        },
+        "Syslog": {
+            "description": "Syslog Parser is a bot capable of parsing syslog data",
+            "module": "intelmq.bots.parsers.syslog.parser",
+            "parameters": {
+                "syslog_regex": ""
+            }
         },
         "Taichung": {
             "description": "Taichung Parser is the bot responsible to parse the report and sanitize the information.",
