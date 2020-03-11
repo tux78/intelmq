@@ -967,6 +967,13 @@
                 "file": "/opt/intelmq/var/lib/bots/sieve/filter.sieve"
             }
         },
+        "Syslog": {
+            "description": "This bot translates field content.",
+            "module": "intelmq.bots.experts.syslog.expert",
+            "parameters": {
+                "field_dict": "{\"extra.risk\": { \"Malicious\": \"15\", \"High Risk\": \"30\"}}"
+            }
+        },
         "Taxonomy": {
             "description": "Taxonomy is the bot responsible to apply the eCSIRT Taxonomy to all events.",
             "module": "intelmq.bots.experts.taxonomy.expert",
@@ -1017,6 +1024,14 @@
                 "esm_ip": "1.2.3.4",
                 "esm_password": "<Password>",
                 "esm_user": "NGCP"
+            }
+        },
+        "McAfee Threat Intelligence Exchange": {
+            "description": "Writes reputation information into McAfee TIE server using DXL.",
+            "module": "intelmq.bots.outputs.mcafee.output_tie",
+            "parameters": {
+                "dxl_config_file": "/etc/intelmq/openDXL/dxlclient.config",
+                "comment": "Reputation added by intelMQ TIE Bot"
             }
         },
         "McAfee ePO DXL Command": {

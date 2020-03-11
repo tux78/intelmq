@@ -37,11 +37,12 @@ class TIEOutputBot(Bot):
         self.dxlclient.connect()
         tie_client = TieClient(self.dxlclient)
 
+        self.logger.info(str( int(event.get("extra.risk", str(TrustLevel.MOST_LIKELY_MALICIOUS)))))
         tie_client.set_file_reputation(
-            TrustLevel.MOST_LIKELY_MALICIOUS, {
-                HashType.SHA256: event.get("malware.hash.sha256"),
-                HashType.SHA1: event.get("malware.hash.sha1"),
-                HashType.MD5: event.get("malware.hash.md5")
+            int(event.get("extra.risk", str(TrustLevel.MOST_LIKELY_MALICIOUS))), {
+                HashType.SHA256: event.get("malware.hash.sha256", ""),
+                HashType.SHA1: event.get("malware.hash.sha1", ""),
+                HashType.MD5: event.get("malware.hash.md5", "")
             },
             filename = event.get("malware.name"),
             comment = self.parameters.comment
