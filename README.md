@@ -26,6 +26,18 @@ This parser processes the output of the DXL Command "detected.systems", which is
 
 The bot generates one message per processed system, and provide a JSON object within the "output" field. This can be processed by subsequent bots.
 
+## Collector: McAfee Data Streaming Bus
+
+This bot is used to consume routed messages via McAfee Data Streaming Bus; the underlying technology is kafka.
+The bot requires four parameters:
+
+- dsb_ip: IP Address of the McAfee DSB appliance
+- dsb_client_cert: the certificate used to authenticate Message Forwarding clients
+- dsb_ca: the McAfee DSB CA
+- dsb_topic: the name of the topic to subscribe; placeholders such as '*' may be used as well
+
+In order to support full operations, the local /etc/hosts file needs to map the DSB GUID to the actual IP address. 
+
 ## Parser: McAfee ESM Export file parser
 
 This bot is used to parse an export file as retrieved from the McAfee Event Receiver, which is collected by the intelMQ file collector. Please see the following link on how to create and use that file for bulk data source import.

@@ -1,2 +1,3 @@
 dxlclient
 dxlepoclient
+kafka-python

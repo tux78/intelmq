@@ -11,6 +11,16 @@
                 "rate_limit": 300
             }
         },
+        "McAfee Data Streaming Bus": {
+            "description": "Connects to a DSB fabric and collects streamed data",
+            "module": "intelmq.bots.collectors.mcafee.collector_dsb",
+            "parameters": {
+                "dsb_ip": "1.2.3.4",
+                "dsb_client_cert": "/tmp/dsb_client.pem",
+                "dsb_ca": "/tmp/dsb_ca.pem",
+                "dsb_topic": "public_*"
+            }
+        },
         "AMQP": {
             "description": "Collecting from a (remote) AMQP Server and fetching either intelmq or any other messages.",
             "module": "intelmq.bots.collectors.amqp.collector_amqp",
