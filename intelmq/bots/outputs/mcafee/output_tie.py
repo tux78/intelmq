@@ -34,7 +34,8 @@ class TIEOutputBot(Bot):
 
         payload = json.dumps(event)
 
-        self.dxlclient.connect()
+        if not self.dxlclient.connected:
+            self.dxlclient.connect()
         tie_client = TieClient(self.dxlclient)
 
         self.logger.info(str( int(event.get("extra.risk", str(TrustLevel.MOST_LIKELY_MALICIOUS)))))

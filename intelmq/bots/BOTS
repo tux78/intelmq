@@ -1,5 +1,26 @@
 {
     "Collector": {
+        "McAfee Data Streaming Bus": {
+            "description": "Connects to a DSB fabric and collects streamed data",
+            "module": "intelmq.bots.collectors.mcafee.collector_dsb",
+            "parameters": {
+                "dsb_ip": "1.2.3.4",
+                "dsb_client_cert": "/tmp/dsb_client.pem",
+                "dsb_ca": "/tmp/dsb_ca.pem",
+                "dsb_topic": "public_*"
+            }
+        },
+        "McAfee ESM Event Collector": {
+            "description": "McAfee ESM Event collector fetches events.",
+            "module": "intelmq.bots.collectors.mcafee.collector_esm",
+            "parameters": {
+                "esm_ip": "1.2.3.4",
+                "esm_user": "<insert user name>",
+                "esm_password": "<password>",
+                "sigID": "<insert signature IDs>",
+                "fields": "<comma-separated list of fields>"
+            }
+        },
         "McAfee ePO DXL Command": {
             "description": "Connects to a openDXL fabric and executes ePO DXL Command",
             "module": "intelmq.bots.collectors.mcafee.collector_epo_dxl_command",
@@ -11,14 +32,24 @@
                 "rate_limit": 300
             }
         },
-        "McAfee Data Streaming Bus": {
-            "description": "Connects to a DSB fabric and collects streamed data",
-            "module": "intelmq.bots.collectors.mcafee.collector_dsb",
+        "McAfee openDXL": {
+            "description": "Listens to McAfee openDXL fabric",
+            "module": "intelmq.bots.collectors.opendxl.collector",
             "parameters": {
-                "dsb_ip": "1.2.3.4",
-                "dsb_client_cert": "/tmp/dsb_client.pem",
-                "dsb_ca": "/tmp/dsb_ca.pem",
-                "dsb_topic": "public_*"
+                "dxl_config_file": "<insert /path/to/dxlclient.config>",
+                "dxl_topic": "/mcafee/event/atd/file/report",
+                "name": "<Feed Name>"
+            }
+        },
+        "McAfee Web Gateway List Collector": {
+            "description": "Connects to a McAfee Web Gateway and downloads the content of a particular list.$
+            "module": "intelmq.bots.collectors.mcafee.collector_mwg",
+            "parameters": {
+                "mwg_ip": "<MWG IP Address>",
+                "mwg_user": "<MWG User Name>",
+               "mwg_password": "<MWG Password>",
+                "mwg_list": "<MWG Listname>",
+                "rate_limit": 3600
             }
         },
         "AMQP": {
@@ -265,37 +296,6 @@
                 "rate_limit": 3600
             }
         },
-        "McAfee openDXL": {
-            "description": "Listens to McAfee openDXL fabric",
-            "module": "intelmq.bots.collectors.opendxl.collector",
-            "parameters": {
-                "dxl_config_file": "<insert /path/to/dxlclient.config>",
-                "dxl_topic": "/mcafee/event/atd/file/report",
-                "name": "<Feed Name>"
-            }
-        },
-        "McAfee ESM Event Collector": {
-            "description": "McAfee ESM Event collector fetches events.",
-            "module": "intelmq.bots.collectors.mcafee.collector_esm",
-            "parameters": {
-                "esm_ip": "1.2.3.4",
-                "esm_user": "<insert user name>",
-                "esm_password": "<password>",
-                "sigID": "<insert signature IDs>",
-                "fields": "<comma-separated list of fields>"
-            }
-        },
-        "McAfee Web Gateway List Collector": {
-            "description": "Connects to a McAfee Web Gateway and downloads the content of a particular list.",
-            "module": "intelmq.bots.collectors.mcafee.collector_mwg",
-            "parameters": {
-                "mwg_ip": "<MWG IP Address>",
-                "mwg_user": "<MWG User Name>",
-               "mwg_password": "<MWG Password>",
-                "mwg_list": "<MWG Listname>",
-                "rate_limit": 3600
-            }
-        },
         "Microsoft Azure": {
             "description": "",
             "module": "intelmq.bots.collectors.microsoft.collector_azure",
@@ -371,6 +371,13 @@
         }
     },
     "Parser": {
+        "McAfee Advanced Threat Defense": {
+            "description": "McAfee Advanced Threat Defense Parser retrieves IOCs (hash, IP, URL) from ATD re$
+            "module": "intelmq.bots.parsers.mcafee.parser_atd",
+            "parameters": {
+                "verdict_severity": "4"
+            }
+        },
         "McAfee ESM": {
             "description": "McAfee ESM Parser is used to parse ESM data source export files",
             "module": "intelmq.bots.parsers.mcafee.parser_esm",
@@ -609,13 +616,6 @@
             "module": "intelmq.bots.parsers.malwareurl.parser",
             "parameters": {}
         },
-        "McAfee Advanced Threat Defense": {
-            "description": "McAfee Advanced Threat Defense Parser retrieves IOCs (hash, IP, URL) from ATD reports.",
-            "module": "intelmq.bots.parsers.mcafee.parser_atd",
-            "parameters": {
-                "verdict_severity": "4"
-            }
-        },
         "Microsoft BingMURLs": {
             "description": "Parses JSON data from Microsoft's Bing Malicious URLs list.",
             "module": "intelmq.bots.parsers.microsoft.parser_bingmurls",
@@ -747,6 +747,14 @@
         }
     },
     "Expert": {
+        "McAfee Active Response Lookup": {
+            "description": "Queries connections to IP addresses within local environment using McAfee Active$
+            "module": "intelmq.bots.experts.mcafee.expert_mar",
+            "parameters": {
+                "dxl_config_file": "<insert /path/to/dxlclient.config>",
+                "lookup_type": "<Hash|DestSocket|DestIP|DestFQDN>"
+            }
+        },
         "ASN Lookup": {
             "description": "ASN Lookup is the bot responsible to add ASN and BGP information from Route Views Project to the events.",
             "module": "intelmq.bots.experts.asn_lookup.expert",
@@ -898,14 +906,6 @@
                 "use_registered": false
             }
         },
-        "McAfee Active Response Lookup": {
-            "description": "Queries connections to IP addresses within local environment using McAfee Active Response queries.",
-            "module": "intelmq.bots.experts.mcafee.expert_mar",
-            "parameters": {
-                "dxl_config_file": "<insert /path/to/dxlclient.config>",
-                "lookup_type": "<Hash|DestSocket|DestIP|DestFQDN>"
-            }
-        },
         "Modify": {
             "description": "Modify bot can make nearly arbitrary changes to event's fields based on regex-rules on different values. See docs/Bots.md for some examples.",
             "module": "intelmq.bots.experts.modify.expert",
@@ -1027,6 +1027,20 @@
         }
     },
     "Output": {
+        "McAfee ATD Report to MISP": {
+           "description": "Publishes ATD IOCs to MISP",
+           "module": "intelmq.bots.outputs.misp.output_misp",
+           "parameters": {
+                "name": "misp_atd",
+                "provider": "",
+                "misp_key": "<insert MISP Authkey>",
+                "misp_url": "<insert url of MISP server (with trailing '/')>",
+                "misp_verify": false,
+                "misp_distribution": 0,
+                "atd_event_publish": false,
+                "atd_verdict_severity": 4
+           }
+        },
         "McAfee ESM DS Boarding": {
             "description": "Writes information out to the McAfee Enterprise Security Manager (ESM).",
             "module": "intelmq.bots.outputs.mcafee.output_esm_ds",
@@ -1036,12 +1050,15 @@
                 "esm_user": "NGCP"
             }
         },
-        "McAfee Threat Intelligence Exchange": {
-            "description": "Writes reputation information into McAfee TIE server using DXL.",
-            "module": "intelmq.bots.outputs.mcafee.output_tie",
+        "McAfee ESM Watchlist": {
+            "description": "Writes information out to the McAfee Enterprise Security Manager (ESM).",
+            "module": "intelmq.bots.outputs.mcafee.output_esm_ip",
             "parameters": {
-                "dxl_config_file": "/etc/intelmq/openDXL/dxlclient.config",
-                "comment": "Reputation added by intelMQ TIE Bot"
+                "esm_ip": "1.2.3.4",
+                "esm_password": "<Password>",
+                "esm_user": "NGCP",
+                "esm_watchlist": "<watchlist name>",
+                "field": "source.ip"
             }
         },
         "McAfee ePO DXL Command": {
@@ -1052,6 +1069,24 @@
                 "dxl_epo_command": "clienttask.run",
                 "name": "McAfee ePO DXL Command",
                 "rate_limit": 300
+            }
+        },
+        "McAfee Threat Intelligence Exchange": {
+            "description": "Writes reputation information into McAfee TIE server using DXL.",
+            "module": "intelmq.bots.outputs.mcafee.output_tie",
+            "parameters": {
+                "dxl_config_file": "/etc/intelmq/openDXL/dxlclient.config",
+                "comment": "Reputation added by intelMQ TIE Bot"
+            }
+        },
+        "McAfee Web Gateway List Updater": {
+            "description": "Connects to a McAfee Web Gateway and updates the content of a particular list.",
+            "module": "intelmq.bots.outputs.mcafee.output_mwg",
+            "parameters": {
+                "mwg_ip": "<MWG IP Address>",
+                "mwg_user": "<MWG User Name>",
+                "mwg_password": "<MWG Password>",
+                "mwg_list": "<MWG Listname>"
             }
         },
         "AMQP Topic": {
@@ -1130,27 +1165,6 @@
                 "single_key": false,
                 "suffix": ".json",
                 "tmp": "/opt/intelmq/var/lib/bots/files-output/tmp"
-            }
-        },
-        "McAfee ESM": {
-            "description": "Writes information out to the McAfee Enterprise Security Manager (ESM).",
-            "module": "intelmq.bots.outputs.mcafee.output_esm_ip",
-            "parameters": {
-                "esm_ip": "1.2.3.4",
-                "esm_password": "<Password>",
-                "esm_user": "NGCP",
-                "esm_watchlist": "<watchlist name>",
-                "field": "source.ip"
-            }
-        },
-        "McAfee Web Gateway List Updater": {
-            "description": "Connects to a McAfee Web Gateway and updates the content of a particular list.",
-            "module": "intelmq.bots.outputs.mcafee.output_mwg",
-            "parameters": {
-                "mwg_ip": "<MWG IP Address>",
-                "mwg_user": "<MWG User Name>",
-                "mwg_password": "<MWG Password>",
-                "mwg_list": "<MWG Listname>"
             }
         },
         "MISP Feed": {
