@@ -42,7 +42,7 @@
             }
         },
         "McAfee Web Gateway List Collector": {
-            "description": "Connects to a McAfee Web Gateway and downloads the content of a particular list.$
+            "description": "Connects to a McAfee Web Gateway and downloads the content of a particular list.",
             "module": "intelmq.bots.collectors.mcafee.collector_mwg",
             "parameters": {
                 "mwg_ip": "<MWG IP Address>",
@@ -372,7 +372,7 @@
     },
     "Parser": {
         "McAfee Advanced Threat Defense": {
-            "description": "McAfee Advanced Threat Defense Parser retrieves IOCs (hash, IP, URL) from ATD re$
+            "description": "McAfee Advanced Threat Defense Parser retrieves IOCs (hash, IP, URL) from ATD reports",
             "module": "intelmq.bots.parsers.mcafee.parser_atd",
             "parameters": {
                 "verdict_severity": "4"
@@ -748,7 +748,7 @@
     },
     "Expert": {
         "McAfee Active Response Lookup": {
-            "description": "Queries connections to IP addresses within local environment using McAfee Active$
+            "description": "Queries connections to IP addresses within local environment using McAfee Active Response",
             "module": "intelmq.bots.experts.mcafee.expert_mar",
             "parameters": {
                 "dxl_config_file": "<insert /path/to/dxlclient.config>",
