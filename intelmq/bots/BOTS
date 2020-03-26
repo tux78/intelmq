@@ -47,9 +47,17 @@
             "parameters": {
                 "mwg_ip": "<MWG IP Address>",
                 "mwg_user": "<MWG User Name>",
-               "mwg_password": "<MWG Password>",
+                "mwg_password": "<MWG Password>",
                 "mwg_list": "<MWG Listname>",
                 "rate_limit": 3600
+            }
+        },
+        "NVD Vulnerability Collector": {
+            "description": "Connects to NVD website and downloads latest vulnerability information.",
+            "module": "intelmq.bots.collectors.nvd.collector",
+            "parameters": {
+                "rate_limit": 3600,
+                "bookmark_file": "/opt/intelmq/var/lib/bots/nvd/bookmark.txt"
             }
         },
         "AMQP": {
