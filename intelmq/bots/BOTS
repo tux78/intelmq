@@ -599,6 +599,11 @@
             "module": "intelmq.bots.parsers.misp.parser",
             "parameters": {}
         },
+        "MISP Fileobjects": {
+            "description": "MISP event parser modified for File Objects (hashes, filename).",
+            "module": "intelmq.bots.parsers.misp.parser_fileobject",
+            "parameters": {}
+        },
         "Malc0de": {
             "description": "Malc0de Parser is the bot responsible to parse the IP Blacklist and either Windows Format or Bind Format reports and sanitize the information.",
             "module": "intelmq.bots.parsers.malc0de.parser",
