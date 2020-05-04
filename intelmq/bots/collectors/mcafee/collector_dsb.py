@@ -20,7 +20,7 @@ class dsbCollectorBot(CollectorBot):
     def init(self):
 
         self.dsb_consumer = KafkaConsumer (
-            group_id = None,
+            group_id = "intelMQ",
             security_protocol = "SSL",
             ssl_cafile = self.parameters.dsb_ca,
             ssl_certfile = self.parameters.dsb_client_cert,
@@ -47,7 +47,8 @@ class dsbCollectorBot(CollectorBot):
 
 
     def shutdown(self):
-        self.dsb_consumer.unsubscribe()
-        self.dsb_consumer.close()
+        self.logger.info("Shutting down.")
+        # self.dsb_consumer.unsubscribe()
+        # self.dsb_consumer.close()
 
 BOT = dsbCollectorBot

@@ -32,6 +32,16 @@
                 "rate_limit": 300
             }
         },
+        "McAfee MVISION EDR": {
+            "description": "Connects to MVISION EDR API and collects streamed data",
+            "module": "intelmq.bots.collectors.mcafee.collector_mvedr",
+            "parameters": {
+                "mvedr_url": "https://api.soc.eu-central-1.mcafee.com/",
+                "mvedr_topic": "",
+                "mvedr_username": "[MVISION EDR User]",
+                "mvedr_password": ""
+            }
+        },
         "McAfee openDXL": {
             "description": "Listens to McAfee openDXL fabric",
             "module": "intelmq.bots.collectors.opendxl.collector",
@@ -39,6 +49,18 @@
                 "dxl_config_file": "<insert /path/to/dxlclient.config>",
                 "dxl_topic": "/mcafee/event/atd/file/report",
                 "name": "<Feed Name>"
+            }
+        },
+        "McAfee Web Gateway Cloud Service Collector": {
+            "description": "Connects to a McAfee WGCS, downloads events stored in a file",
+            "module": "intelmq.bots.collectors.mcafee.collector_wgcs",
+            "parameters": {
+                "wgcs_location": "US or EU",
+                "wgcs_customer": "<CustomerID>",
+                "wgcs_username": "<Username>",
+                "wgcs_password": "<Password>",
+                "wgcs_path": "/tmp/wgcs_logs/",
+                "rate_limit": 600
             }
         },
         "McAfee Web Gateway List Collector": {
@@ -1280,6 +1302,15 @@
                 "ssl_ca_certificate": "<insert path to CA file>",
                 "ssl_client_certificate": "<insert path to client cert file>",
                 "ssl_client_certificate_key": "<insert path to client cert key file>"
+            }
+        },
+        "Syslog": {
+            "description": "Sends event via the Syslog protocol.",
+            "module": "intelmq.bots.outputs.syslog.output",
+            "parameters": {
+                "syslog_ip": "1.2.3.4",
+                "syslog_port": 514,
+                "syslog_proto": "[TCP|UDP]"
             }
         },
         "TCP": {
