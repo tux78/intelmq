@@ -26,60 +26,27 @@ from intelmq.lib.exceptions import MissingDependencyError
 
 class MARExpertBot(Bot):
 
+    params = ['name', 'output', 'op', 'value']
+
     query = {
         'Hash':
             [
-                {
-                    "name": "Files",
-                    "output": "md5",
-                    "op": "EQUALS",
-                    "value": '%(malware.hash.md5)s'
-                },
-                {
-                    "name": "Files",
-                    "output": "sha1",
-                    "op": "EQUALS",
-                    "value": '%(malware.hash.sha1)s'
-                },
-                {
-                    "name": "Files",
-                    "output": "sha256",
-                    "op": "EQUALS",
-                    "value": '%(malware.hash.sha256)s'
-                }
+                ['Files', 'md5', 'EQUALS', 'malware.hash.md5'],
+                ['Files', 'sha1', 'EQUALS', 'malware.hash.sha1'],
+                ['Files', 'sha256', 'EQUALS', 'malware.hash.sha256']
             ],
         'DestSocket':
             [
-                {
-                    "name": "NetworkFlow",
-                    "output": "dst_ip",
-                    "op": "EQUALS",
-                    "value": '%(destination.ip)s'
-                },
-                {
-                    "name": "NetworkFlow",
-                    "output": "dst_port",
-                    "op": "EQUALS",
-                    "value": '%(destination.port)s'
-                }
+                ['NetworkFlow', 'dst_ip', 'EQUALS', 'destination.ip'],
+                ['NetworkFlow', 'dst_port', 'EQUALS', 'destination.port']
             ],
         'DestIP':
             [
-                {
-                    "name": "NetworkFlow",
-                    "output": "dst_ip",
-                    "op": "EQUALS",
-                    "value": '%(destination.ip)s'
-                }
+                ['NetworkFlow', 'dst_ip', 'EQUALS', 'destination.ip']
             ],
         'DestFQDN':
             [
-                {
-                    "name": "DNSCache",
-                    "output": "hostname",
-                    "op": "EQUALS",
-                    "value": '%(destination.fqdn)s'
-                }
+                ['DNSCache', 'hostname', 'EQUALS', 'destination.fqdn']
             ]
     }
 
@@ -94,16 +61,20 @@ class MARExpertBot(Bot):
     def process(self):
         report = self.receive_message()
 
-        try:
-            mar_search_str = self.query[self.parameters.lookup_type] % report
-            for ip_address in self.MAR_Query(mar_search_str):
+        mar_query = []
+        for item in self.query[self.parameters.lookup_type]:
+            query_dict = {key: value for key, value in zip(self.params, item)}
+            try:
+                query_dict['value'] = report[query_dict['value']]
+                mar_query.append(query_dict)
+            except KeyError:
+                pass
+        if mar_query:
+            self.logger.info('Executing query with the following parameters: ' + str(mar_query))
+            for ip_address in self.MAR_Query(mar_query):
                 event = self.new_event(report)
                 event.add('source.ip', ip_address)
                 self.send_message(event)
-
-        except KeyError:
-            self.logger.debug('No information of requested type contained.')
-            pass
 
         self.acknowledge_message()
 
@@ -141,6 +112,5 @@ class MARExpertBot(Bot):
                 results = results_context.get_results()
                 for item in results[ResultConstants.ITEMS]:
                     yield (item['output']['HostInfo|ip_address'])
-
 
 BOT = MARExpertBot
