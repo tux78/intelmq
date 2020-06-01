@@ -21,6 +21,18 @@
                 "fields": "<comma-separated list of fields>"
             }
         },
+        "McAfee ESM data source Collector": {
+            "description": "McAfee ESM data source collector retrieves a list of data sources.",
+            "module": "intelmq.bots.collectors.mcafee.collector_esm_ds",
+            "parameters": {
+                "esm_ip": "1.2.3.4",
+                "esm_user": "<insert user name>",
+                "esm_password": "<password>",
+                "device_id": "[\"144116281234567890\"] or leave empty",
+                "hide_disabled": true,
+                "rate_limit": 300
+            }
+        },
         "McAfee ePO DXL Command": {
             "description": "Connects to a openDXL fabric and executes ePO DXL Command",
             "module": "intelmq.bots.collectors.mcafee.collector_epo_dxl_command",
@@ -413,6 +425,11 @@
             "module": "intelmq.bots.parsers.mcafee.parser_esm",
             "parameters": {}
         },
+        "McAfee ESM Data Source": {
+            "description": "McAfee ESM Parser is used to parse ESM data source information",
+            "module": "intelmq.bots.parsers.mcafee.parser_esm_ds",
+            "parameters": {}
+        },
         "McAfee RSD": {
             "description": "RSDParserBot parses McAfee ePO Rogue System Detection observations.",
             "module": "intelmq.bots.parsers.mcafee.parser_rsd",
@@ -788,6 +805,13 @@
             "parameters": {
                 "dxl_config_file": "<insert /path/to/dxlclient.config>",
                 "lookup_type": "<Hash|DestSocket|DestIP|DestFQDN>"
+            }
+        },
+        "McAfee ESM data source DNS lookup": {
+            "description": "looks up the hostname in DNS from data source details",
+            "module": "intelmq.bots.experts.mcafee.expert_esm_ds_dns",
+            "parameters": {
+                "dns_server": "1.2.3.4"
             }
         },
         "ASN Lookup": {
