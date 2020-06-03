@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-ESMCollectorBot connects to McAfee Enterprise Security Manager, and downloads a list of data sources
 
-Parameters:
+ESMDSDNSExpertBot looks up the hostname in DNS from data source details
+
+Parameter:
 esm_ip: IP Address of ESM
 esm_user: username to connect to ESM
 esm_password: Password of esm_user
-hide_disabled: omit disabled data sources
-get_details: retrieves detailed information on data sources
+
 """
 
-import base64
+# import required libraries
 import json
-import time
-
-from datetime import datetime, timezone
-from intelmq.lib.bot import CollectorBot
-
+import base64
 try:
     import requests
     requests.packages.urllib3.disable_warnings()
 except ImportError:
     requests = None
 
-class ESMDataSourceCollectorBot(CollectorBot):
+# imports for additional libraries and intelmq
+from intelmq.lib.bot import Bot
+from intelmq.lib.exceptions import MissingDependencyError
+
+
+class ESMDSClientsExpertBot(Bot):
 
     def init(self):
         if requests is None:
@@ -39,48 +40,24 @@ class ESMDataSourceCollectorBot(CollectorBot):
         if not(self._heartbeat()):
             raise ValueError('Cannot login.')
 
-        # additional parameters
-        self.hide_disabled = self.parameters.hide_disabled
-        self.get_details = self.parameters.get_details
-        self.device_id = []
-        if (self.parameters.device_id != ''):
-            # Get device list from non-empty parameter
-            for erc in self.parameters.device_id:
-                self.device_id.append(erc)
-        else:
-            # Get all devices from ESM
-            payload = {'types' : ['RECEIVER'] }
-            response = self._call_API('devGetDeviceList?filterByRights=false', payload)
-            for erc in response.json():
-                self.device_id.append(erc['id'])
-        self.logger.info('Handling the following device IDs: ' + str(self.device_id))
-
     def process(self):
+        report = self.receive_message()
 
         if not(self._heartbeat()):
             raise ValueError('Cannot login.')
 
-        for erc in self.device_id:
-            dslist = []
-            payload = {'receiverId' : erc}
-            retVal = self._call_API('dsGetDataSourceList', payload)     
+        payload = {'datasourceId' : report['extra.id']}
+        if (report['extra.details']['childCount'] > 0 and report['extra.details']['childType'] == 2):
+            retVal = self._call_API('dsGetDataSourceClients', payload).json()
+            for client in retVal:
+                event = self.new_event ()
+                event.add ('source.fqdn', client['host'])
+                event.add ('source.ip', client['ipAddress'])
+                payload = {'details': client, 'id': client['id'], 'type': 'client'}
+                event.add ('extra', payload)
+                self.send_message (event)
 
-            if (self.parameters.get_details):
-                for ds in retVal.json():
-                    payload = {'datasourceId' : str(ds['id'])}
-                    parent = self._call_API('dsGetDataSourceDetail', payload).json()
-                    if (parent['childCount'] > 0 and parent['childType'] == 2):
-                        parent['Clients'] = self._call_API('dsGetDataSourceClients', payload).json()
-                    parent['id'] = str(ds['id'])
-                    dslist.append (parent)
-            else:
-                dslist = retVal.json()
-
-            # Create and send message
-            event_report = self.new_report()
-            event_report.add('raw', json.dumps(dslist))
-            self.send_message (event_report)
-            self.logger.debug('Message sent.')
+        self.acknowledge_message()
 
     def _login (self):
         self.auth_header = {'Content-Type': 'application/json'}
@@ -139,4 +116,4 @@ class ESMDataSourceCollectorBot(CollectorBot):
         )
         return response
 
-BOT = ESMDataSourceCollectorBot
+BOT = ESMDSClientsExpertBot

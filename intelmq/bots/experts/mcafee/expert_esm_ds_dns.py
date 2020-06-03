@@ -27,21 +27,17 @@ class ESMDSDNSExpertBot(Bot):
 
     def process(self):
         report = self.receive_message()
-        datasource = json.loads(report.get('output'))
 
-        hostname = ''
-        for parameter in datasource['parameters']:
-            if parameter['key'] == 'hostname':
-                hostname = parameter['value']
-                break
-
-        if hostname != '':
-            try:
-                response = self.resolver.query(hostname, 'A')
-            except (NoNameservers, NXDOMAIN):
-                event = self.new_event(report)
-                event.add ('source.local_hostname', hostname)
-                self.send_message(event)
+        try:
+            event = self.new_event(report)
+            response = self.resolver.query(report['source.fqdn'], 'A')
+        except (NoNameservers, NXDOMAIN):
+            event.add ('source.local_hostname', report['source.fqdn'])
+            event.add ('status', 'DNS Lookup failed')
+            self.send_message(event)
+        except KeyError:
+            event.add ('status', 'No hostname given')
+            self.send_message(event)
 
         self.acknowledge_message()
 

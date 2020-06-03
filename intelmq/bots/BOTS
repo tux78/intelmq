@@ -30,6 +30,7 @@
                 "esm_password": "<password>",
                 "device_id": "[\"144116281234567890\"] or leave empty",
                 "hide_disabled": true,
+                "get_details": true,
                 "rate_limit": 300
             }
         },
@@ -805,6 +806,15 @@
             "parameters": {
                 "dxl_config_file": "<insert /path/to/dxlclient.config>",
                 "lookup_type": "<Hash|DestSocket|DestIP|DestFQDN>"
+            }
+        },
+        "McAfee ESM data source Clients": {
+            "description": "Retrieves client data sources for a data source",
+            "module": "intelmq.bots.experts.mcafee.expert_esm_ds_clients",
+            "parameters": {
+                "esm_ip": "1.2.3.4",
+                "esm_user": "<insert user name>",
+                "esm_password": "<password>"
             }
         },
         "McAfee ESM data source DNS lookup": {

@@ -20,8 +20,18 @@ class ESMDSParserBot(Bot):
 
         for datasource in datasources:
             event = self.new_event (report)
-            event.add ('output', datasource)
+            event.add ('source.ip', datasource['ipAddress'])
+            payload = {'details': datasource, 'id': datasource['id'], 'type': 'parent'}
+            event.add ('extra', payload)
+            for parameter in datasource['parameters']:
+                if parameter['key'] == 'hostname':
+                    try:
+                        event.add ('source.fqdn', parameter['value'])
+                    except:
+                        pass
+                    break
             self.send_message (event)
+
         self.acknowledge_message()
 
 BOT = ESMDSParserBot
