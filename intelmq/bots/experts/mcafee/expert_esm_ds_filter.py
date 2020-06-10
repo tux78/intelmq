@@ -24,7 +24,6 @@ class ESMDSFilterExpertBot(Bot):
     def process(self):
         report = self.receive_message()
 
-        print(report['extra.id'] + ': ' + str(self.datasource_id))
         if (self.datasource_id == [] or report['extra.id'] in self.datasource_id):
             event = self.new_event(report)
             self.send_message(event)

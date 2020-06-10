@@ -69,8 +69,6 @@ class ESMDataSourceCollectorBot(CollectorBot):
                 for ds in retVal.json():
                     payload = {'datasourceId' : str(ds['id'])}
                     parent = self._call_API('dsGetDataSourceDetail', payload).json()
-                    if (parent['childCount'] > 0 and parent['childType'] == 2):
-                        parent['Clients'] = self._call_API('dsGetDataSourceClients', payload).json()
                     parent['id'] = str(ds['id'])
                     dslist.append (parent)
             else:
