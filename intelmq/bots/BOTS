@@ -830,6 +830,13 @@
                 "dns_server": "1.2.3.4"
             }
         },
+        "McAfee ESM data source filter": {
+            "description": "filters data sources based on ID",
+            "module": "intelmq.bots.experts.mcafee.expert_esm_ds_filter",
+            "parameters": {
+                "datasource_id": "[]"
+            }
+        },
         "ASN Lookup": {
             "description": "ASN Lookup is the bot responsible to add ASN and BGP information from Route Views Project to the events.",
             "module": "intelmq.bots.experts.asn_lookup.expert",
