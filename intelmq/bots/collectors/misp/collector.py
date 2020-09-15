@@ -72,9 +72,7 @@ class MISPCollectorBot(CollectorBot):
             report.add('feed.url', self.parameters.misp_url)
             self.send_message(report)
 
-        # Finally, update the tags on the MISP events.
-
-        for misp_event in misp_result:
+            # Finally, update the tags on the MISP events.
             if hasattr(self.parameters, 'misp_tag_processed'):
                 # Add a 'processed' tag to the event
                 self.misp.tag(misp_event['uuid'],
