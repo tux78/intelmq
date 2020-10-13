@@ -153,6 +153,8 @@ class ESMCollectorBot(CollectorBot):
         time.sleep(60)
 
     def _evaluate_event (self, event):
+        # Add field names
+        event['fields'] = self.field_list
         # For correlated events, the IOCs have to be collected
         if event['values'][0] == '47':
             # Correlated event, get indicators
